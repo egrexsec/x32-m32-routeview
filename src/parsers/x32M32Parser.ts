@@ -10,7 +10,8 @@
 //   /config/routing/IN AN1-8 AN9-16 AES50A-1-8 ...
 //
 // This parser is intentionally conservative: it extracts what it can recognize,
-// stores unknown lines in `unrecognizedLines`, and never throws.
+// categorizes unknown lines for visibility, stores a capped raw debug sample,
+// and never throws.
 //
 // FUTURE EXTENSIONS:
 //  - Behringer Wing parser → new file (parsers/wingParser.ts), implements MixerParser
@@ -26,11 +27,69 @@ import type {
   OutputPatch,
   OutputType,
   RoutingBlock,
+  UnrecognizedCategory,
 } from "@/types/routing";
 import { emptyScene, type MixerParser } from "./mixerParser";
 
 // Match a quoted name like "Kick Drum". Empty labels are valid in X32 scenes.
 const NAME_RE = /"([^"]*)"/;
+const MAX_UNRECOGNIZED_RAW_LINES = 500;
+const MAX_UNRECOGNIZED_EXAMPLES_PER_CATEGORY = 5;
+
+type UnrecognizedCategoryKey =
+  | "Channel Delay"
+  | "Channel Preamp"
+  | "Channel Gate"
+  | "Channel Dynamics"
+  | "Channel Insert"
+  | "Channel EQ"
+  | "Channel Sends"
+  | "Channel Automix"
+  | "Aux Channel Processing"
+  | "FX Return Processing"
+  | "Bus Processing"
+  | "Matrix Processing"
+  | "Main/Mono Processing"
+  | "Output Detail Settings"
+  | "Console Config"
+  | "Routing Detail"
+  | "User Routing"
+  | "User Controls"
+  | "Talkback"
+  | "DP48"
+  | "Mute Groups"
+  | "Effects Rack"
+  | "Headamp"
+  | "Scene Metadata"
+  | "Miscellaneous";
+
+const UNRECOGNIZED_CATEGORY_DESCRIPTIONS: Record<UnrecognizedCategoryKey, string> = {
+  "Channel Delay": "Per-channel delay enable/time values that are useful for engineering views.",
+  "Channel Preamp": "Per-channel preamp gain, phantom power, polarity, and source-trim style values.",
+  "Channel Gate": "Per-channel gate/expander settings and sidechain filter values.",
+  "Channel Dynamics": "Per-channel compressor/dynamics settings and sidechain filter values.",
+  "Channel Insert": "Per-channel insert enable, position, and insert source selections.",
+  "Channel EQ": "Per-channel EQ enable and band settings.",
+  "Channel Sends": "Per-channel main mix and bus-send levels, pan, mute, and tap-point data.",
+  "Channel Automix": "Per-channel automix enable and weighting values.",
+  "Aux Channel Processing": "Aux input processing, EQ, dynamics, inserts, and sends.",
+  "FX Return Processing": "FX return processing, EQ, inserts, and sends.",
+  "Bus Processing": "Mix bus processing, EQ, dynamics, inserts, and send/master settings.",
+  "Matrix Processing": "Matrix bus processing, EQ, dynamics, inserts, and send/master settings.",
+  "Main/Mono Processing": "Main LR/M/C processing, EQ, dynamics, inserts, and mix settings.",
+  "Output Detail Settings": "Output delay, polarity, iQ, and other output child settings that are not output patch assignments.",
+  "Console Config": "Global console configuration such as linking, solo, mono, oscillator, tape, and automix settings.",
+  "Routing Detail": "Routing blocks or routing subcommands not yet normalized into the main routing tables.",
+  "User Routing": "User-defined input/output routing tables.",
+  "User Controls": "Assignable control bank colors, encoders, and buttons.",
+  "Talkback": "Talkback source, level, destination, and routing data.",
+  "DP48": "DP48 personal monitor assignment, link, and group-name data.",
+  "Mute Groups": "Mute group configuration and membership data.",
+  "Effects Rack": "Effects rack slot, type, source, return, and parameter data.",
+  Headamp: "Physical preamp/headamp gain, phantom, and hardware-level data.",
+  "Scene Metadata": "Scene, snippet, safes, cue, show, or metadata lines.",
+  Miscellaneous: "Unmatched X32/M32 scene commands that need future parser support.",
+};
 
 function cleanLabel(value: string | undefined, fallback: string): string {
   const trimmed = (value ?? "").trim();
@@ -213,6 +272,62 @@ function inputSourcesFromRouting(assignments: string[]): Map<number, string> {
   return map;
 }
 
+function categorizeUnrecognizedLine(line: string): UnrecognizedCategoryKey {
+  if (/^\/ch\/\d{1,2}\/delay\b/.test(line)) return "Channel Delay";
+  if (/^\/ch\/\d{1,2}\/preamp\b/.test(line)) return "Channel Preamp";
+  if (/^\/ch\/\d{1,2}\/gate\b/.test(line)) return "Channel Gate";
+  if (/^\/ch\/\d{1,2}\/dyn\b/.test(line)) return "Channel Dynamics";
+  if (/^\/ch\/\d{1,2}\/insert\b/.test(line)) return "Channel Insert";
+  if (/^\/ch\/\d{1,2}\/eq\b/.test(line)) return "Channel EQ";
+  if (/^\/ch\/\d{1,2}\/mix(?:\/\d{2})?\b/.test(line)) return "Channel Sends";
+  if (/^\/ch\/\d{1,2}\/automix\b/.test(line)) return "Channel Automix";
+
+  if (/^\/auxin\/\d{2}\//.test(line)) return "Aux Channel Processing";
+  if (/^\/fxrtn\/\d{2}\//.test(line)) return "FX Return Processing";
+  if (/^\/bus\/\d{1,2}\//.test(line)) return "Bus Processing";
+  if (/^\/mtx\/\d{1,2}\//.test(line)) return "Matrix Processing";
+  if (/^\/(main|mono|lr|m)\//.test(line)) return "Main/Mono Processing";
+
+  if (/^\/outputs\//.test(line)) return "Output Detail Settings";
+  if (/^\/config\/userctrl\//.test(line)) return "User Controls";
+  if (/^\/config\/userrout\//.test(line)) return "User Routing";
+  if (/^\/config\/talk\b/.test(line) || /^\/config\/talk\//.test(line)) return "Talkback";
+  if (/^\/config\/dp48\b/.test(line) || /^\/config\/dp48\//.test(line)) return "DP48";
+  if (/^\/config\/routing\b/.test(line) || /^\/config\/routing\//.test(line)) return "Routing Detail";
+  if (/^\/config\//.test(line)) return "Console Config";
+
+  if (/^\/mute\//.test(line) || /^\/config\/mute\b/.test(line)) return "Mute Groups";
+  if (/^\/fx\//.test(line)) return "Effects Rack";
+  if (/^\/headamp\//.test(line)) return "Headamp";
+  if (/^\/(scene|snippet|safes|cue|show)\b/.test(line)) return "Scene Metadata";
+
+  return "Miscellaneous";
+}
+
+function addUnrecognizedLine(
+  categoryMap: Map<UnrecognizedCategoryKey, UnrecognizedCategory>,
+  scene: MixerScene,
+  line: string,
+) {
+  const category = categorizeUnrecognizedLine(line);
+  const current = categoryMap.get(category) ?? {
+    category,
+    description: UNRECOGNIZED_CATEGORY_DESCRIPTIONS[category],
+    count: 0,
+    examples: [],
+  };
+
+  current.count += 1;
+  if (current.examples.length < MAX_UNRECOGNIZED_EXAMPLES_PER_CATEGORY) {
+    current.examples.push(line);
+  }
+  categoryMap.set(category, current);
+
+  if (scene.unrecognizedLines.length < MAX_UNRECOGNIZED_RAW_LINES) {
+    scene.unrecognizedLines.push(line);
+  }
+}
+
 function detectIsX32Scene(text: string): boolean {
   return /^#\s*\d+\.\d+/m.test(text) || /\/ch\/\d{2}\/config/.test(text) || /\/bus\/\d{2}\/config/.test(text);
 }
@@ -229,6 +344,7 @@ export const x32M32Parser: MixerParser = {
     const busMap = new Map<number, MixBus>();
     const dcaMap = new Map<number, DCAGroup>();
     const channelDcaMap = new Map<number, number[]>();
+    const unrecognizedCategoryMap = new Map<UnrecognizedCategoryKey, UnrecognizedCategory>();
     let inputRouting: RoutingBlock | undefined;
 
     for (const raw of lines) {
@@ -267,11 +383,8 @@ export const x32M32Parser: MixerParser = {
         continue;
       }
 
-      // Only record meaningful unrecognized lines (skip generic /-/ tweaks)
       if (line.startsWith("/")) {
-        if (scene.unrecognizedLines.length < 500) {
-          scene.unrecognizedLines.push(line);
-        }
+        addUnrecognizedLine(unrecognizedCategoryMap, scene, line);
       }
     }
 
@@ -298,6 +411,7 @@ export const x32M32Parser: MixerParser = {
     scene.inputs = Array.from(channelMap.values()).sort((a, b) => a.number - b.number);
     scene.buses = Array.from(busMap.values()).sort((a, b) => a.number - b.number);
     scene.dcas = Array.from(dcaMap.values()).sort((a, b) => a.number - b.number);
+    scene.unrecognizedCategories = Array.from(unrecognizedCategoryMap.values()).sort((a, b) => b.count - a.count);
 
     // Status heuristic
     const hasAny = scene.inputs.length || scene.buses.length || scene.outputs.length;
@@ -313,7 +427,7 @@ export const x32M32Parser: MixerParser = {
 
     if (scene.unrecognizedLines.length) {
       scene.warnings.push(
-        `${scene.unrecognizedLines.length} line(s) were not recognized by the parser and stored for debugging.`,
+        `${scene.unrecognizedLines.length} unrecognized line sample(s) were stored across ${scene.unrecognizedCategories.length} categor${scene.unrecognizedCategories.length === 1 ? "y" : "ies"} for parser improvement.`,
       );
     }
 
