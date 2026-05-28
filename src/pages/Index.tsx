@@ -70,24 +70,14 @@ const Index = () => {
                 <div className="border-b px-2 pt-2 no-print">
                   <TabsList className="flex flex-wrap">
                     <TabsTrigger value="production">Production Sheet</TabsTrigger>
-                    <TabsTrigger value="inputs">Inputs</TabsTrigger>
-                    <TabsTrigger value="buses">Buses</TabsTrigger>
-                    <TabsTrigger value="dcas">DCAs</TabsTrigger>
-                    <TabsTrigger value="outputs">Outputs</TabsTrigger>
-                    <TabsTrigger value="signal">Signal Flow</TabsTrigger>
-                    <TabsTrigger value="parser">Parser Buckets</TabsTrigger>
                     <TabsTrigger value="export">Export</TabsTrigger>
+                    <TabsTrigger value="advanced">Advanced</TabsTrigger>
                   </TabsList>
                 </div>
                 <div className="p-4 md:p-6">
                   <TabsContent value="production"><ProductionSheet scene={scene} /></TabsContent>
-                  <TabsContent value="inputs"><InputsTab scene={scene} /></TabsContent>
-                  <TabsContent value="buses"><BusesTab scene={scene} /></TabsContent>
-                  <TabsContent value="dcas"><DCAsTab scene={scene} /></TabsContent>
-                  <TabsContent value="outputs"><OutputsTab scene={scene} /></TabsContent>
-                  <TabsContent value="signal"><SignalFlowTab scene={scene} /></TabsContent>
-                  <TabsContent value="parser"><ParserBucketsTab scene={scene} /></TabsContent>
                   <TabsContent value="export"><ExportTab scene={scene} /></TabsContent>
+                  <TabsContent value="advanced"><AdvancedTools scene={scene} /></TabsContent>
                 </div>
               </Tabs>
             </section>
@@ -105,6 +95,29 @@ const Index = () => {
     </main>
   );
 };
+
+function AdvancedTools({ scene }: { scene: MixerScene }) {
+  return (
+    <Tabs defaultValue="inputs" className="w-full">
+      <div className="mb-4 rounded-lg border bg-muted/20 p-2 no-print">
+        <TabsList className="flex h-auto flex-wrap justify-start">
+          <TabsTrigger value="inputs">Inputs</TabsTrigger>
+          <TabsTrigger value="buses">Buses</TabsTrigger>
+          <TabsTrigger value="dcas">DCAs</TabsTrigger>
+          <TabsTrigger value="outputs">Outputs</TabsTrigger>
+          <TabsTrigger value="signal">Signal Flow</TabsTrigger>
+          <TabsTrigger value="engineering">Engineering Data</TabsTrigger>
+        </TabsList>
+      </div>
+      <TabsContent value="inputs"><InputsTab scene={scene} /></TabsContent>
+      <TabsContent value="buses"><BusesTab scene={scene} /></TabsContent>
+      <TabsContent value="dcas"><DCAsTab scene={scene} /></TabsContent>
+      <TabsContent value="outputs"><OutputsTab scene={scene} /></TabsContent>
+      <TabsContent value="signal"><SignalFlowTab scene={scene} /></TabsContent>
+      <TabsContent value="engineering"><ParserBucketsTab scene={scene} /></TabsContent>
+    </Tabs>
+  );
+}
 
 function EmptyHint() {
   return (
