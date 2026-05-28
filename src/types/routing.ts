@@ -15,6 +15,32 @@ export type OutputType =
 
 export type ParseStatus = "Parsed" | "Partial" | "Missing Data" | "Unsupported";
 
+export interface SceneSetting {
+  section: string;
+  name: string;
+  value: string;
+  notes?: string;
+}
+
+export interface ChannelSend {
+  bus: number;
+  enabled: boolean;
+  level: string;
+  pan?: string;
+  tap?: string;
+}
+
+export interface ChannelProcessingSnapshot {
+  delay?: string;
+  preamp?: string;
+  gate?: string;
+  dynamics?: string;
+  insert?: string;
+  eq?: string;
+  mainMix?: string;
+  automix?: string;
+}
+
 export interface InputChannel {
   number: number;
   name: string;
@@ -22,6 +48,8 @@ export interface InputChannel {
   color?: string;
   icon?: string;
   dcaAssignments?: string[];
+  processing?: ChannelProcessingSnapshot;
+  sends?: ChannelSend[];
   notes?: string;
 }
 
@@ -61,6 +89,7 @@ export interface MixerScene {
   dcas: DCAGroup[];
   outputs: OutputPatch[];
   routingBlocks: RoutingBlock[];
+  settings: SceneSetting[];
   warnings: string[];
   unrecognizedLines: string[];
 }
