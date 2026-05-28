@@ -1,0 +1,282 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* X32/M32 RouteView — deep-navy console palette
+   All semantic tokens defined in HSL.
+   Palette reference:
+   --background       #020817  Deep navy-black
+   --section bg       #071226
+   --card             #0B1220
+   --border           #2A3441
+   --foreground       #DDEBFF  ice-blue white
+   --muted-foreground #94A3B8  slate gray
+   --primary          #2563EB  bright accent blue
+   --primary hover    #3B82F6  electric accent
+   --accent purple    #4F46E5
+   --cyan glow        #38BDF8
+   --success          #22C55E
+   --warning          #F59E0B
+   --destructive      #EF4444
+*/
+
+@layer base {
+  :root {
+    --background: 222 47% 5%;          /* #020817 */
+    --foreground: 215 100% 93%;        /* #DDEBFF */
+
+    --card: 222 49% 8%;                /* #0B1220 */
+    --card-foreground: 215 100% 93%;
+
+    --popover: 222 49% 8%;
+    --popover-foreground: 215 100% 93%;
+
+    --primary: 221 83% 53%;            /* #2563EB */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 70% 9%;           /* #071226 */
+    --secondary-foreground: 215 100% 93%;
+
+    --muted: 220 70% 9%;               /* #071226 */
+    --muted-foreground: 215 20% 65%;   /* #94A3B8 */
+
+    --accent: 244 75% 59%;             /* #4F46E5 */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;          /* #EF4444 */
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 71% 45%;            /* #22C55E */
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;             /* #F59E0B */
+    --warning-foreground: 222 47% 5%;
+    --info: 199 92% 60%;               /* #38BDF8 cyan glow */
+    --info-foreground: 222 47% 5%;
+
+    --border: 215 21% 21%;             /* #2A3441 */
+    --input: 215 21% 21%;
+    --ring: 217 91% 60%;               /* #3B82F6 */
+
+    --radius: 0.6rem;
+
+    --gradient-hero: linear-gradient(
+      135deg,
+      hsl(222 47% 5%) 0%,
+      hsl(220 70% 9%) 55%,
+      hsl(244 75% 22%) 100%
+    );
+    --gradient-panel: linear-gradient(180deg, hsl(222 49% 9%) 0%, hsl(220 70% 7%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(221 83% 53%), hsl(244 75% 59%));
+    --shadow-panel: 0 1px 0 hsl(215 21% 18%), 0 12px 30px -16px hsl(0 0% 0% / 0.6);
+    --shadow-glow: 0 0 0 1px hsl(217 91% 60% / 0.35), 0 8px 28px -8px hsl(199 92% 60% / 0.35);
+
+    --sidebar-background: 220 70% 9%;
+    --sidebar-foreground: 215 100% 93%;
+    --sidebar-primary: 221 83% 53%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 222 49% 12%;
+    --sidebar-accent-foreground: 215 100% 93%;
+    --sidebar-border: 215 21% 21%;
+    --sidebar-ring: 217 91% 60%;
+  }
+
+  .dark {
+    --background: 222 47% 5%;
+    --foreground: 215 100% 93%;
+    --card: 222 49% 8%;
+    --card-foreground: 215 100% 93%;
+    --popover: 222 49% 8%;
+    --popover-foreground: 215 100% 93%;
+    --primary: 221 83% 53%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 70% 9%;
+    --secondary-foreground: 215 100% 93%;
+    --muted: 220 70% 9%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 244 75% 59%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 222 47% 5%;
+    --info: 199 92% 60%;
+    --info-foreground: 222 47% 5%;
+    --border: 215 21% 21%;
+    --input: 215 21% 21%;
+    --ring: 217 91% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "ss01", "cv11";
+  }
+  .font-mono {
+    font-family: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Consolas, monospace;
+  }
+}
+
+@layer components {
+  .panel {
+    @apply rounded-lg border bg-card text-card-foreground;
+    box-shadow: var(--shadow-panel);
+  }
+  .hero-bg {
+    background: var(--gradient-hero);
+  }
+  .panel-bg {
+    background: var(--gradient-panel);
+  }
+  .console-grid {
+    background-image:
+      linear-gradient(hsl(var(--border) / 0.6) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--border) / 0.6) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+}
+
+/* ===== Print / PDF document ===== */
+@media screen {
+  .print-view { display: none !important; }
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm 12mm;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    color: #0B1220 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .no-print { display: none !important; }
+
+  /* Hide the entire app UI while printing — only the print document shows. */
+  body > #root > *:not(.print-view) { display: none !important; }
+  body > #root main > *:not(.print-view) { display: none !important; }
+
+  .print-view {
+    display: block !important;
+    color: #0B1220;
+    font-family: -apple-system, "Segoe UI", Inter, system-ui, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.45;
+  }
+
+  .print-view .print-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-bottom: 2px solid #2563EB;
+    padding-bottom: 10px;
+    margin-bottom: 16px;
+  }
+  .print-view .print-header h1 {
+    margin: 0;
+    font-size: 22pt;
+    font-weight: 700;
+    color: #020817;
+    letter-spacing: -0.01em;
+  }
+  .print-view .print-sub {
+    margin: 2px 0 0;
+    color: #4F46E5;
+    font-size: 10pt;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+  .print-view .print-meta {
+    text-align: right;
+    font-size: 9pt;
+    color: #475569;
+  }
+  .print-view .print-meta strong { color: #0B1220; }
+
+  .print-view .print-summary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+  .print-view .print-stat {
+    border: 1px solid #CBD5E1;
+    border-left: 3px solid #2563EB;
+    padding: 8px 10px;
+    border-radius: 4px;
+    background: #F8FAFC;
+  }
+  .print-view .print-stat-value {
+    font-size: 18pt;
+    font-weight: 700;
+    color: #020817;
+    line-height: 1;
+  }
+  .print-view .print-stat-label {
+    font-size: 8.5pt;
+    color: #64748B;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 2px;
+  }
+
+  .print-view .print-section {
+    margin-top: 16px;
+    page-break-inside: auto;
+  }
+  .print-view .print-section h2 {
+    font-size: 12pt;
+    font-weight: 700;
+    color: #020817;
+    margin: 0 0 6px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #2A3441;
+  }
+
+  .print-view .print-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9.5pt;
+    page-break-inside: auto;
+  }
+  .print-view .print-table thead { display: table-header-group; }
+  .print-view .print-table tr { page-break-inside: avoid; page-break-after: auto; }
+  .print-view .print-table th {
+    text-align: left;
+    background: #071226;
+    color: #DDEBFF;
+    padding: 5px 7px;
+    font-weight: 600;
+    font-size: 8.5pt;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border: 1px solid #2A3441;
+  }
+  .print-view .print-table td {
+    padding: 4px 7px;
+    border: 1px solid #E2E8F0;
+    vertical-align: top;
+  }
+  .print-view .print-table tbody tr:nth-child(even) td {
+    background: #F8FAFC;
+  }
+
+  .print-view .print-footer {
+    margin-top: 24px;
+    padding-top: 8px;
+    border-top: 1px solid #CBD5E1;
+    text-align: center;
+    font-size: 8pt;
+    color: #64748B;
+  }
+}
