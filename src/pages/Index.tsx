@@ -4,6 +4,7 @@ import { UploadPanel } from "@/components/UploadPanel";
 import { RoutingSummary } from "@/components/RoutingSummary";
 import { BusesTab, DCAsTab, InputsTab, OutputsTab } from "@/components/RoutingTabs";
 import { SignalFlowTab } from "@/components/SignalFlowTab";
+import { ParserBucketsTab } from "@/components/ParserBucketsTab";
 import { ExportTab } from "@/components/ExportTab";
 import { PrintView } from "@/components/PrintView";
 import { WarningsPanel } from "@/components/WarningsPanel";
@@ -28,7 +29,6 @@ const Index = () => {
 
   return (
     <main className="min-h-screen bg-background">
-      {/* HERO */}
       <header className="hero-bg relative overflow-hidden text-white no-print">
         <div className="console-grid absolute inset-0 opacity-[0.08]" aria-hidden />
         <div className="container relative py-12 md:py-16">
@@ -42,10 +42,7 @@ const Index = () => {
             Upload a console scene file and generate clean routing documentation in seconds.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
-            <Button
-              size="lg"
-              onClick={() => document.getElementById("upload")?.scrollIntoView({ behavior: "smooth" })}
-            >
+            <Button size="lg" onClick={() => document.getElementById("upload")?.scrollIntoView({ behavior: "smooth" })}>
               <FileUp className="mr-1.5 h-4 w-4" /> Upload .scn File
             </Button>
             <Button size="lg" variant="secondary" onClick={loadDemo}>
@@ -60,12 +57,7 @@ const Index = () => {
       </header>
 
       <div id="upload" className="container space-y-6 py-8">
-        <UploadPanel
-          scene={scene}
-          onParseText={handleParse}
-          onLoadDemo={loadDemo}
-          onClear={clear}
-        />
+        <UploadPanel scene={scene} onParseText={handleParse} onLoadDemo={loadDemo} onClear={clear} />
 
         {scene ? (
           <>
@@ -81,6 +73,7 @@ const Index = () => {
                     <TabsTrigger value="dcas">DCAs</TabsTrigger>
                     <TabsTrigger value="outputs">Outputs</TabsTrigger>
                     <TabsTrigger value="signal">Signal Flow</TabsTrigger>
+                    <TabsTrigger value="parser">Parser Buckets</TabsTrigger>
                     <TabsTrigger value="export">Export</TabsTrigger>
                   </TabsList>
                 </div>
@@ -90,6 +83,7 @@ const Index = () => {
                   <TabsContent value="dcas"><DCAsTab scene={scene} /></TabsContent>
                   <TabsContent value="outputs"><OutputsTab scene={scene} /></TabsContent>
                   <TabsContent value="signal"><SignalFlowTab scene={scene} /></TabsContent>
+                  <TabsContent value="parser"><ParserBucketsTab scene={scene} /></TabsContent>
                   <TabsContent value="export"><ExportTab scene={scene} /></TabsContent>
                 </div>
               </Tabs>
