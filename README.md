@@ -1,35 +1,58 @@
 # X32/M32 RouteView
 
-RouteView is a browser-based documentation and signal-topology visualization tool for Behringer X32 and Midas M32 console scene files.
+RouteView is a topology-aware documentation and visualization platform for Behringer X32 and Midas M32 scene files.
 
-It transforms `.scn` files into readable production documentation, routing maps, signal traces, and engineering reference sheets without requiring X32-Edit or M32-Edit.
+It converts `.scn` files into readable operational documentation, signal-flow references, routing maps, engineering summaries, and production-ready print sheets.
 
-The application is designed to remain universally applicable across:
+Unlike traditional console editors, RouteView focuses on:
 
-- Houses of worship
-- Touring rigs
-- Broadcast environments
-- Corporate AV
-- Theater
-- Schools and education
-- Rental and production companies
-- Personal studios
+- understanding signal topology
+- documenting routing
+- visualizing console structure
+- troubleshooting signal flow
+- onboarding volunteers and engineers
+- generating operational reference sheets
 
-RouteView does not assume a specific workflow or venue type.
-All labels, routing, buses, outputs, colors, and topology are derived directly from the uploaded `.scn` file.
+RouteView is intentionally:
+
+- parser-driven
+- topology-driven
+- workflow-agnostic
+- non-destructive
+
+Everything displayed in the application is derived directly from the uploaded `.scn` file.
 
 ---
 
-# Features
+# Supported Environments
 
-## Scene Import
+RouteView is designed to work universally across:
+
+- Houses of worship
+- Touring productions
+- Broadcast environments
+- Corporate AV
+- Theater
+- Educational facilities
+- Rental companies
+- Personal studios
+
+The application does not assume any specific workflow, naming convention, or venue type.
+
+---
+
+# Core Features
+
+## Scene Parsing
 
 - Upload X32/M32 `.scn` files
-- Drag-and-drop scene support
-- Paste raw scene text directly
-- Demo scene loading
-- Conservative parser behavior
-- Parser warning and diagnostics system
+- Drag-and-drop support
+- Paste raw scene text
+- Conservative parser architecture
+- Categorized parser buckets
+- Parser diagnostics and warnings
+- Unmatched line detection
+- Parser health metrics
 
 ---
 
@@ -37,31 +60,32 @@ All labels, routing, buses, outputs, colors, and topology are derived directly f
 
 The Production Sheet is the primary operational view.
 
-It generates:
+It automatically generates:
 
 - Input channel documentation
 - DCA group layouts
 - Mix bus summaries
 - Output routing maps
-- Signal traces
 - Routing block references
+- Signal traces
+- Physical output groupings
 
-### Input Channels
+### Input Channel Documentation
 
 Displays:
 
 - Channel number
-- Channel name
+- Channel label/name
 - Scribble strip color
 - DCA assignments
 - Preamp information
-- Notes field
+- Optional notes field
 
-### Scribble Strip Color Rendering
+### Scribble Strip Rendering
 
 Scene color codes are rendered visually:
 
-| Scene Code | Display |
+| Code | Color |
 | --- | --- |
 | RD | Red |
 | GN | Green |
@@ -71,33 +95,18 @@ Scene color codes are rendered visually:
 | WH | White |
 | OFF | Neutral |
 
-### DCA Groups
+---
 
-Displays DCA 1–8 assignments using console-style grouping.
+## Signal Tracing
 
-### Mix Buses
+RouteView derives signal paths from:
 
-Displays:
+- channel sends
+- bus relationships
+- output mappings
+- routing topology
 
-- Bus names
-- Sending channels
-- Send levels
-- PRE/POST tap normalization
-- Mapped outputs
-
-### Physical Outputs
-
-Outputs are grouped into physical-style banks:
-
-- XLR outputs
-- AES50 routing
-- Card routing
-- Ultranet routing
-- Routing blocks
-
-### Signal Traces
-
-Derived signal topology tracing:
+Example:
 
 ```text
 CH 01 Kick
@@ -105,42 +114,53 @@ CH 01 Kick
 → XLR 15
 ```
 
-Signal traces are generated dynamically from:
-
-- Channel sends
-- Bus mappings
-- Output assignments
-- Routing topology
-
-No hardcoded workflow assumptions are used.
+Signal tracing is topology-driven and contains no hardcoded venue assumptions.
 
 ---
 
-# Universal Scene-Driven Architecture
+## Visual Signal Graph
 
-RouteView is intentionally:
+The Signal Graph provides a topology-oriented visualization layer.
 
-- topology-driven
-- parser-driven
-- workflow-agnostic
+Displays:
 
-The application never assumes:
+- Inputs
+- Buses
+- Outputs
+- Signal relationships
+- Parsed topology structure
 
-- church routing
-- broadcast workflows
-- monitor structures
-- naming conventions
-- venue-specific organization
+Includes:
 
-Everything derives from the uploaded `.scn` file.
+- Active-only filtering
+- Quick filtering/search
+- Fallback topology rendering
+- Trace inspection
 
 ---
 
-# Derived Scene Model
+## Physical Output Visualization
 
-RouteView now uses a derived topology layer.
+Outputs are grouped into console-style physical banks:
 
-Architecture:
+- XLR outputs
+- AES50 routing
+- Card outputs
+- Ultranet routing
+- Routing blocks
+
+This improves:
+
+- troubleshooting
+- patch verification
+- stagebox mapping
+- operational readability
+
+---
+
+# Architecture
+
+RouteView uses a layered scene-topology architecture.
 
 ```text
 Raw Scene Parse
@@ -152,37 +172,39 @@ Presentation Layers
 
 The `DerivedSceneModel` computes:
 
-- Active inputs
-- Active buses
-- Output banks
-- Signal traces
-- Send relationships
-- Routing topology
-- Active/inactive filtering
+- active inputs
+- active buses
+- active outputs
+- output banks
+- signal traces
+- routing topology
+- send relationships
+- active/inactive filtering
 
 This architecture enables:
 
-- Signal tracing
-- Advanced exports
-- Search/filter systems
-- Future compare/diff tools
-- Volunteer vs Engineer views
-- Routing intelligence
+- topology visualization
+- signal tracing
+- advanced exports
+- future diff/compare systems
+- validation tooling
+- routing intelligence
 
 ---
 
-# Current Views
+# Application Views
 
 | View | Purpose |
 | --- | --- |
-| Production Sheet | Operational routing documentation |
-| Export | Markdown, CSV, and print/PDF exports |
-| Inputs | Detailed input channel data |
-| Buses | Detailed bus and send data |
-| DCAs | DCA assignment views |
-| Outputs | Output and patch mapping |
+| Production Sheet | Operational documentation |
+| Export | Markdown, CSV, and PDF/print exports |
+| Inputs | Detailed channel data |
+| Buses | Bus and send information |
+| DCAs | DCA assignments |
+| Outputs | Physical output and routing maps |
 | Signal Flow | Simplified routing relationships |
-| Engineering Data | Advanced parser and categorized scene data |
+| Signal Graph | Visual topology rendering |
+| Engineering Data | Parser diagnostics and categorized advanced data |
 
 ---
 
@@ -192,55 +214,77 @@ RouteView includes:
 
 - Quick Find search
 - Active/inactive filtering
-- Hide unused channels
 - Trace filtering
 - Output filtering
+- Hide unused channels
 
-Search can locate:
+Search supports:
 
-- Channels
-- Buses
-- Outputs
-- Routing references
-- Signal traces
+- channels
+- buses
+- outputs
+- signal traces
+- routing references
 
 ---
 
-# Export Features
+# Engineering Data & Parser Health
 
-Supported exports:
+The Engineering Data system provides:
+
+- categorized parser buckets
+- parser coverage metrics
+- unmatched line reporting
+- issue-ready parser follow-ups
+- advanced engineering visibility
+
+Coverage metrics include:
+
+- recognized structures
+- categorized advanced lines
+- unmatched parser coverage
+- parser health summaries
+
+Only truly unmatched lines are marked uncategorized.
+
+---
+
+# Export System
+
+Supported export formats:
 
 - Markdown
 - CSV
 - Print/PDF
 
-Exports can optionally include:
+Export options include:
 
-- Parser bucket categories
 - Production Sheet sections
+- Parser bucket categories
 - Routing details
 - Engineering data
+- Signal traces
 
 ---
 
 # Print Optimization
 
-The print system is optimized for:
+The print engine is optimized for:
 
-- Clipboard documentation
 - FOH reference sheets
-- Volunteer handouts
-- Technical routing archives
-- PDF exports
+- volunteer handouts
+- routing archives
+- clipboard documentation
+- PDF generation
 
-Includes:
+Features:
 
-- Print-safe color rendering
-- Compact spacing
-- Sticky table headers
-- Page-break protection
-- Inter/system font stack
-- Console-style layout formatting
+- print-safe scribble colors
+- compact spacing
+- page-break protection
+- sticky headers
+- Inter/system typography
+- console-inspired layouts
 
 ---
 
@@ -257,15 +301,15 @@ It:
 
 - extracts recognized routing data
 - preserves unsupported lines
-- categorizes parser buckets
 - avoids destructive assumptions
-- never modifies original scene files
+- never modifies uploaded files
+- categorizes advanced parser buckets
 
 ---
 
-# Parser Support
+# Parser Coverage
 
-Currently recognized:
+Currently recognized patterns include:
 
 ```text
 /ch/01/config
@@ -278,11 +322,11 @@ Currently recognized:
 /config/routing/IN
 ```
 
-Parser buckets categorize additional engineering data including:
+Advanced parser buckets include:
 
 - Channel EQ
 - Dynamics
-- Gate
+- Gates
 - Inserts
 - Bus processing
 - Matrix processing
@@ -292,15 +336,13 @@ Parser buckets categorize additional engineering data including:
 - Talkback
 - Console configuration
 
-Only truly unmatched lines are marked uncategorized.
-
 ---
 
 # Tech Stack
 
-- Vite
 - React
 - TypeScript
+- Vite
 - Tailwind CSS
 - shadcn/ui
 - Radix UI
@@ -311,7 +353,7 @@ Only truly unmatched lines are marked uncategorized.
 
 # Getting Started
 
-## Prerequisites
+## Requirements
 
 Recommended:
 
@@ -324,19 +366,19 @@ Recommended:
 npm install
 ```
 
-## Development Server
+## Start Development Server
 
 ```bash
 npm run dev
 ```
 
-## Production Build
+## Build Production Version
 
 ```bash
 npm run build
 ```
 
-## Preview Build
+## Preview Production Build
 
 ```bash
 npm run preview
@@ -356,13 +398,13 @@ npm run lint
 
 ---
 
-# Basic Usage
+# Basic Workflow
 
-1. Open the application
-2. Upload an X32/M32 `.scn` file
-3. Review the Production Sheet
-4. Search/filter routing data
-5. Inspect Engineering Data if needed
+1. Upload an X32/M32 `.scn` file
+2. Review the Production Sheet
+3. Inspect routing and topology
+4. Search/filter operational data
+5. Review parser diagnostics if needed
 6. Export documentation as Markdown, CSV, or PDF
 
 ---
@@ -371,70 +413,76 @@ npm run lint
 
 ```text
 src/
-├── components/        # UI views and production sheets
-├── lib/               # Derived scene model and utilities
+├── components/        # UI views and topology visualization
+├── lib/               # Derived scene models and utilities
 ├── pages/             # Main application pages
-├── parsers/           # Scene parsers
+├── parsers/           # X32/M32 parser logic
 ├── types/             # Shared routing models
 └── App.tsx
 ```
 
 ---
 
-# Current Roadmap
+# Roadmap
 
-## Immediate Priorities
+## Near-Term Priorities
 
-- Visual signal-path graphing
-- Parser coverage metrics
+- Interactive graph edges
+- Reverse signal tracing
+- Routing validation engine
 - Compact density modes
-- Output trace overlays
-- Advanced routing visualization
+- Export unification
+- RoutingGraphBuilder subsystem
 
 ## Future Features
 
 - Scene diff/compare
 - Volunteer vs Engineer modes
-- Additional mixer support
-- Advanced topology graphs
-- Standalone PDF generation
+- Advanced topology rendering
 - Saved documentation profiles
+- Additional mixer support
+- Standalone PDF engine
 
 ---
 
-# Important Notes
+# Design Philosophy
 
-RouteView is a documentation and visualization tool only.
+RouteView is not intended to replace console editor software.
 
-It does not:
+It is designed to:
 
-- connect to live consoles
-- modify scene files
-- push changes to hardware
-- replace console editor software
+- explain routing
+- visualize topology
+- improve operational clarity
+- accelerate troubleshooting
+- generate readable documentation
+- help engineers understand console structure quickly
 
-Use it to:
+The focus is:
 
-- understand routing
-- troubleshoot topology
-- document scenes
-- archive configurations
-- onboard volunteers
-- review signal flow
+```text
+Operational topology intelligence
+```
+
+rather than:
+
+```text
+Remote console control
+```
 
 ---
 
 # Contributing
 
-Keep changes:
+Contributions should remain:
 
-- focused
-- operationally useful
-- topology-driven
-- workflow-agnostic
 - parser-safe
+- topology-driven
+- operationally useful
+- workflow-agnostic
+- production-focused
 
-The goal is to help engineers quickly understand real-world console scenes under production conditions.
+The goal is to help engineers quickly understand real-world console scenes under live production conditions.
 
 ---
 
