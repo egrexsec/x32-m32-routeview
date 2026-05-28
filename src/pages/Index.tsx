@@ -5,6 +5,7 @@ import { RoutingSummary } from "@/components/RoutingSummary";
 import { BusesTab, DCAsTab, InputsTab, OutputsTab } from "@/components/RoutingTabs";
 import { SignalFlowTab } from "@/components/SignalFlowTab";
 import { ParserBucketsTab } from "@/components/ParserBucketsTab";
+import { ProductionSheet } from "@/components/ProductionSheet";
 import { ExportTab } from "@/components/ExportTab";
 import { PrintView } from "@/components/PrintView";
 import { WarningsPanel } from "@/components/WarningsPanel";
@@ -65,9 +66,10 @@ const Index = () => {
             <WarningsPanel scene={scene} />
 
             <section className="panel">
-              <Tabs defaultValue="inputs" className="w-full">
+              <Tabs defaultValue="production" className="w-full">
                 <div className="border-b px-2 pt-2 no-print">
                   <TabsList className="flex flex-wrap">
+                    <TabsTrigger value="production">Production Sheet</TabsTrigger>
                     <TabsTrigger value="inputs">Inputs</TabsTrigger>
                     <TabsTrigger value="buses">Buses</TabsTrigger>
                     <TabsTrigger value="dcas">DCAs</TabsTrigger>
@@ -78,6 +80,7 @@ const Index = () => {
                   </TabsList>
                 </div>
                 <div className="p-4 md:p-6">
+                  <TabsContent value="production"><ProductionSheet scene={scene} /></TabsContent>
                   <TabsContent value="inputs"><InputsTab scene={scene} /></TabsContent>
                   <TabsContent value="buses"><BusesTab scene={scene} /></TabsContent>
                   <TabsContent value="dcas"><DCAsTab scene={scene} /></TabsContent>
