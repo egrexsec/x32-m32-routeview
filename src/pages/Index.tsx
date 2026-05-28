@@ -4,6 +4,7 @@ import { UploadPanel } from "@/components/UploadPanel";
 import { RoutingSummary } from "@/components/RoutingSummary";
 import { BusesTab, DCAsTab, InputsTab, OutputsTab } from "@/components/RoutingTabs";
 import { SignalFlowTab } from "@/components/SignalFlowTab";
+import { SignalGraphTab } from "@/components/SignalGraphTab";
 import { ParserBucketsTab } from "@/components/ParserBucketsTab";
 import { ProductionSheet } from "@/components/ProductionSheet";
 import { ExportTab } from "@/components/ExportTab";
@@ -106,6 +107,7 @@ function AdvancedTools({ scene }: { scene: MixerScene }) {
           <TabsTrigger value="dcas">DCAs</TabsTrigger>
           <TabsTrigger value="outputs">Outputs</TabsTrigger>
           <TabsTrigger value="signal">Signal Flow</TabsTrigger>
+          <TabsTrigger value="graph">Signal Graph</TabsTrigger>
           <TabsTrigger value="engineering">Engineering Data</TabsTrigger>
         </TabsList>
       </div>
@@ -114,6 +116,7 @@ function AdvancedTools({ scene }: { scene: MixerScene }) {
       <TabsContent value="dcas"><DCAsTab scene={scene} /></TabsContent>
       <TabsContent value="outputs"><OutputsTab scene={scene} /></TabsContent>
       <TabsContent value="signal"><SignalFlowTab scene={scene} /></TabsContent>
+      <TabsContent value="graph"><SignalGraphTab scene={scene} /></TabsContent>
       <TabsContent value="engineering"><ParserBucketsTab scene={scene} /></TabsContent>
     </Tabs>
   );
