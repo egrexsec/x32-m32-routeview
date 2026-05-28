@@ -1,1 +1,3 @@
-# x32-m32-routeview
+# Welcome to your Lovable project
+
+TODO: Document your project here
