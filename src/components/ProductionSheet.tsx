@@ -2,14 +2,15 @@ import { useMemo, useState } from "react";
 import type { InputChannel, MixerScene, MixBus, OutputPatch } from "@/types/routing";
 
 type ColorMeta = { label: string; className: string };
+type BusRole = "monitor" | "stream" | "fx" | "matrix" | "mix";
 
 const COLOR_MAP: Record<string, ColorMeta> = {
-  RD: { label: "Red", className: "scribble-rd" },
-  GN: { label: "Green", className: "scribble-gn" },
-  YE: { label: "Yellow", className: "scribble-ye" },
-  CY: { label: "Cyan", className: "scribble-cy" },
-  MG: { label: "Magenta", className: "scribble-mg" },
-  WH: { label: "White", className: "scribble-wh" },
+  RD: { label: "RED", className: "scribble-rd" },
+  GN: { label: "GREEN", className: "scribble-gn" },
+  YE: { label: "YELLOW", className: "scribble-ye" },
+  CY: { label: "CYAN", className: "scribble-cy" },
+  MG: { label: "MAGENTA", className: "scribble-mg" },
+  WH: { label: "WHITE", className: "scribble-wh" },
   OFF: { label: "—", className: "scribble-off" },
 };
 
@@ -24,7 +25,17 @@ function channelName(channel: InputChannel): string {
 
 function isUnusedChannel(channel: InputChannel): boolean {
   const normalized = channel.name?.trim().toLowerCase() ?? "";
-  return !normalized || normalized === `ch ${channel.number}` || normalized === channelNumber(channel.number) || normalized.includes("unused");
+  const defaultName =
+    !normalized ||
+    normalized === `ch ${channel.number}` ||
+    normalized === channelNumber(channel.number) ||
+    normalized === `channel ${channel.number}` ||
+    normalized.includes("unused");
+  const hasDca = (channel.dcaAssignments ?? []).length > 0;
+  const hasActiveSend = (channel.sends ?? []).some((send) => send.enabled && send.level !== "-oo");
+  const hasSource = !!channel.source && channel.source !== "—";
+
+  return defaultName && !hasDca && !hasActiveSend && !hasSource;
 }
 
 function colorMeta(color?: string): ColorMeta {
@@ -32,9 +43,7 @@ function colorMeta(color?: string): ColorMeta {
 }
 
 function preampLabel(channel: InputChannel): string {
-  const preamp = channel.processing?.preamp;
-  if (preamp) return preamp;
-  return "—";
+  return channel.processing?.preamp || "—";
 }
 
 function dcaLabel(channel: InputChannel): string {
@@ -54,12 +63,20 @@ function dcaAssignments(scene: MixerScene) {
   });
 }
 
-function busType(bus: MixBus): string {
+function busRole(bus: MixBus): BusRole {
   const name = bus.name.toLowerCase();
-  if (/monitor|mon|iem|wedge|stage/.test(name)) return "Stage Monitor";
-  if (/stream|broadcast|online|record|rec/.test(name)) return "Broadcast / Stream";
-  if (/fx|verb|delay|reverb/.test(name)) return "FX Rack Send";
-  if (/matrix|sub|fill|lobby|foyer/.test(name)) return "Matrix / Fill / Subs";
+  if (/monitor|mon|iem|wedge|stage/.test(name)) return "monitor";
+  if (/stream|broadcast|online|record|rec/.test(name)) return "stream";
+  if (/fx|verb|delay|reverb/.test(name)) return "fx";
+  if (/matrix|sub|fill|lobby|foyer/.test(name)) return "matrix";
+  return "mix";
+}
+
+function busTypeLabel(role: BusRole, bus: MixBus): string {
+  if (role === "monitor") return "Stage Monitor";
+  if (role === "stream") return "Broadcast / Stream";
+  if (role === "fx") return "FX Rack Send";
+  if (role === "matrix") return "Matrix / Fill / Subs";
   return bus.type ?? "Mix Bus";
 }
 
@@ -88,7 +105,7 @@ function outputGroups(outputs: OutputPatch[], type: string, size = 4) {
 }
 
 export function ProductionSheet({ scene, printMode = false }: { scene: MixerScene; printMode?: boolean }) {
-  const [hideUnused, setHideUnused] = useState(false);
+  const [hideUnused, setHideUnused] = useState(true);
   const generated = new Date(scene.parsedAt).toLocaleString();
   const inputChannels = useMemo(() => {
     const mainInputs = scene.inputs.filter((channel) => channel.number >= 1 && channel.number <= 32);
@@ -101,7 +118,7 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
   const outBlock = scene.routingBlocks.find((block) => block.blockName === "OUT");
 
   return (
-    <div className={printMode ? "production-sheet production-sheet-print" : "production-sheet space-y-6"}>
+    <div className={printMode ? "production-sheet production-sheet-print" : "production-sheet space-y-8"}>
       <header className="prod-header">
         <div>
           <p className="prod-kicker">X32 / M32 Production Sheet</p>
@@ -114,17 +131,21 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
       </header>
 
       {!printMode ? (
-        <div className="no-print rounded-lg border bg-muted/30 p-3 text-sm">
+        <div className="no-print prod-toolbar">
           <label className="flex cursor-pointer items-center gap-2">
             <input type="checkbox" checked={hideUnused} onChange={(event) => setHideUnused(event.target.checked)} />
             <span>Hide unused channels</span>
           </label>
+          <span>{inputChannels.length} visible input channel{inputChannels.length === 1 ? "" : "s"}</span>
         </div>
       ) : null}
 
       <section className="prod-section">
         <div className="prod-section-title">
-          <h2>Main Input Channels</h2>
+          <div>
+            <span className="prod-section-index">01</span>
+            <h2>Main Input Channels</h2>
+          </div>
           <span>CH 01–32</span>
         </div>
         <div className="prod-table-wrap">
@@ -146,9 +167,7 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
                   <tr key={channel.number}>
                     <td className="prod-mono">{channelNumber(channel.number)}</td>
                     <td className="prod-strong">{channelName(channel)}</td>
-                    <td>
-                      <span className={`scribble-chip ${meta.className}`}>{meta.label}</span>
-                    </td>
+                    <td><span className={`scribble-chip ${meta.className}`}>{meta.label}</span></td>
                     <td>{dcaLabel(channel)}</td>
                     <td>{preampLabel(channel)}</td>
                     <td>{channel.notes ?? ""}</td>
@@ -162,13 +181,20 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
 
       <section className="prod-section">
         <div className="prod-section-title">
-          <h2>DCA Groups</h2>
+          <div>
+            <span className="prod-section-index">02</span>
+            <h2>DCA Groups</h2>
+          </div>
           <span>Volunteer Fader Map</span>
         </div>
-        <div className="dca-grid">
+        <div className="dca-grid dca-fader-grid">
           {dcas.map((dca) => (
-            <div key={dca.number} className="dca-card">
-              <div className="dca-card-head">[DCA {dca.number}] {dca.name}</div>
+            <div key={dca.number} className="dca-card dca-fader-card">
+              <div className="dca-card-head">
+                <span className="dca-number">DCA {dca.number}</span>
+                <strong>{dca.name}</strong>
+              </div>
+              <div className="dca-fader-line" aria-hidden />
               {dca.assigned.length ? (
                 <ul>
                   {dca.assigned.map((channel) => (
@@ -187,19 +213,23 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
 
       <section className="prod-section">
         <div className="prod-section-title">
-          <h2>Mix Busses & Aux Sends</h2>
+          <div>
+            <span className="prod-section-index">03</span>
+            <h2>Mix Busses & Aux Sends</h2>
+          </div>
           <span>Monitor / Stream / FX Overview</span>
         </div>
         <div className="bus-grid">
           {scene.buses.map((bus) => {
             const sends = sendingChannels(scene, bus.number);
+            const role = busRole(bus);
             return (
               <div key={bus.number} className="bus-card">
                 <div className="bus-card-head">
                   <strong>Mix Bus {channelNumber(bus.number)}</strong>
                   <span>{bus.name}</span>
                 </div>
-                <div className="bus-type">{busType(bus)}</div>
+                <div className={`bus-type bus-role-${role}`}>{busTypeLabel(role, bus)}</div>
                 {sends.length ? (
                   <ul>
                     {sends.map(({ channel, send }) => (
@@ -219,7 +249,10 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
 
       <section className="prod-section">
         <div className="prod-section-title">
-          <h2>Hardware Outputs & Patching</h2>
+          <div>
+            <span className="prod-section-index">04</span>
+            <h2>Hardware Outputs & Patching</h2>
+          </div>
           <span>Physical Troubleshooting Map</span>
         </div>
         <div className="patch-grid">
