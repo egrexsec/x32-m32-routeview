@@ -23,6 +23,7 @@ export function emptyScene(meta?: { fileName?: string; fileSize?: number }): Mix
     outputs: [],
     routingBlocks: [],
     settings: [],
+    unrecognizedCategories: [],
     warnings: [],
     unrecognizedLines: [],
   };
