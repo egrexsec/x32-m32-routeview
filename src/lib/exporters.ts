@@ -1,22 +1,87 @@
 import type { MixerScene } from "@/types/routing";
 
+export interface ExportOptions {
+  includeSettings?: boolean;
+  includeChannelProcessing?: boolean;
+  includeChannelSends?: boolean;
+  includeUnrecognizedSummary?: boolean;
+  includeUnrecognizedExamples?: boolean;
+  includeRawUnrecognized?: boolean;
+}
+
+export const defaultExportOptions: ExportOptions = {
+  includeSettings: false,
+  includeChannelProcessing: false,
+  includeChannelSends: false,
+  includeUnrecognizedSummary: true,
+  includeUnrecognizedExamples: false,
+  includeRawUnrecognized: false,
+};
+
 function pad(s: string | number, n: number): string {
   const str = String(s);
   return str.length >= n ? str : str + " ".repeat(n - str.length);
 }
 
-function mdTable(headers: string[], rows: (string | number)[][]): string {
+function mdCell(value: string | number | undefined): string {
+  return String(value ?? "").replace(/\|/g, "\\|").replace(/\n/g, " ");
+}
+
+function mdTable(headers: string[], rows: (string | number | undefined)[][]): string {
   const aligns = headers.map(() => "---");
   const out: string[] = [];
-  out.push(`| ${headers.join(" | ")} |`);
+  out.push(`| ${headers.map(mdCell).join(" | ")} |`);
   out.push(`| ${aligns.join(" | ")} |`);
   for (const r of rows) {
-    out.push(`| ${r.map((c) => String(c ?? "")).join(" | ")} |`);
+    out.push(`| ${r.map(mdCell).join(" | ")} |`);
   }
   return out.join("\n");
 }
 
-export function sceneToMarkdown(scene: MixerScene): string {
+function resolvedOptions(options?: ExportOptions): Required<ExportOptions> {
+  return { ...defaultExportOptions, ...options } as Required<ExportOptions>;
+}
+
+function hasChannelProcessing(scene: MixerScene): boolean {
+  return scene.inputs.some((c) => c.processing && Object.keys(c.processing).length > 0);
+}
+
+function hasChannelSends(scene: MixerScene): boolean {
+  return scene.inputs.some((c) => (c.sends ?? []).length > 0);
+}
+
+function processingSummary(scene: MixerScene): (string | number | undefined)[][] {
+  return scene.inputs
+    .filter((c) => c.processing && Object.keys(c.processing).length > 0)
+    .map((c) => [
+      c.number,
+      c.name,
+      c.processing?.delay ?? "",
+      c.processing?.preamp ?? "",
+      c.processing?.gate ?? "",
+      c.processing?.dynamics ?? "",
+      c.processing?.eq ?? "",
+      c.processing?.mainMix ?? "",
+      c.processing?.automix ?? "",
+    ]);
+}
+
+function sendsSummary(scene: MixerScene): (string | number | undefined)[][] {
+  return scene.inputs.flatMap((c) =>
+    (c.sends ?? []).map((send) => [
+      c.number,
+      c.name,
+      send.bus,
+      send.enabled ? "ON" : "OFF",
+      send.level,
+      send.pan ?? "",
+      send.tap ?? "",
+    ]),
+  );
+}
+
+export function sceneToMarkdown(scene: MixerScene, options?: ExportOptions): string {
+  const opts = resolvedOptions(options);
   const lines: string[] = [];
   lines.push(`# X32 / M32 RouteView — Routing Documentation`);
   lines.push("");
@@ -33,6 +98,8 @@ export function sceneToMarkdown(scene: MixerScene): string {
   lines.push(`| Mix buses | ${scene.buses.length} |`);
   lines.push(`| DCA groups | ${scene.dcas.length} |`);
   lines.push(`| Output patches | ${scene.outputs.length} |`);
+  lines.push(`| Settings captured | ${scene.settings?.length ?? 0} |`);
+  lines.push(`| Parser categories | ${scene.unrecognizedCategories?.length ?? 0} |`);
   lines.push(`| Generated | ${new Date(scene.parsedAt).toLocaleString()} |`);
   lines.push("");
 
@@ -102,6 +169,83 @@ export function sceneToMarkdown(scene: MixerScene): string {
     lines.push("");
   }
 
+  if (opts.includeSettings && (scene.settings?.length ?? 0) > 0) {
+    lines.push(`---`);
+    lines.push("");
+    lines.push(`## Console Settings`);
+    lines.push("");
+    lines.push(
+      mdTable(
+        ["Section", "Setting", "Value", "Notes"],
+        (scene.settings ?? []).map((s) => [s.section, s.name, s.value, s.notes ?? ""]),
+      ),
+    );
+    lines.push("");
+  }
+
+  if (opts.includeChannelProcessing && hasChannelProcessing(scene)) {
+    lines.push(`---`);
+    lines.push("");
+    lines.push(`## Channel Processing`);
+    lines.push("");
+    lines.push(
+      mdTable(
+        ["Ch", "Name", "Delay", "Preamp", "Gate", "Dynamics", "EQ", "Main Mix", "Automix"],
+        processingSummary(scene),
+      ),
+    );
+    lines.push("");
+  }
+
+  if (opts.includeChannelSends && hasChannelSends(scene)) {
+    lines.push(`---`);
+    lines.push("");
+    lines.push(`## Channel Sends`);
+    lines.push("");
+    lines.push(mdTable(["Ch", "Name", "Bus", "Enabled", "Level", "Pan", "Tap"], sendsSummary(scene)));
+    lines.push("");
+  }
+
+  if (opts.includeUnrecognizedSummary && (scene.unrecognizedCategories?.length ?? 0) > 0) {
+    lines.push(`---`);
+    lines.push("");
+    lines.push(`## Parser Category Summary`);
+    lines.push("");
+    lines.push(
+      mdTable(
+        ["Category", "Count", "Description"],
+        (scene.unrecognizedCategories ?? []).map((c) => [c.category, c.count, c.description]),
+      ),
+    );
+    lines.push("");
+  }
+
+  if (opts.includeUnrecognizedExamples && (scene.unrecognizedCategories?.length ?? 0) > 0) {
+    lines.push(`---`);
+    lines.push("");
+    lines.push(`## Parser Category Examples`);
+    lines.push("");
+    for (const c of scene.unrecognizedCategories ?? []) {
+      lines.push(`### ${c.category} (${c.count})`);
+      lines.push("");
+      lines.push("```txt");
+      lines.push(...c.examples);
+      lines.push("```");
+      lines.push("");
+    }
+  }
+
+  if (opts.includeRawUnrecognized && scene.unrecognizedLines.length) {
+    lines.push(`---`);
+    lines.push("");
+    lines.push(`## Raw Unrecognized Line Sample`);
+    lines.push("");
+    lines.push("```txt");
+    lines.push(...scene.unrecognizedLines);
+    lines.push("```");
+    lines.push("");
+  }
+
   if (scene.warnings.length) {
     lines.push(`---`);
     lines.push("");
@@ -131,7 +275,8 @@ function toCSV(rows: (string | number | undefined)[][]): string {
 }
 
 /** Single combined CSV with section banners for Inputs / Buses / DCAs / Outputs. */
-export function combinedCSV(scene: MixerScene): string {
+export function combinedCSV(scene: MixerScene, options?: ExportOptions): string {
+  const opts = resolvedOptions(options);
   const sections: string[] = [];
 
   sections.push(
@@ -186,6 +331,72 @@ export function combinedCSV(scene: MixerScene): string {
       ...scene.outputs.map((o) => [o.outputType, o.number, o.source, o.notes ?? ""]),
     ]),
   );
+
+  if (opts.includeSettings && (scene.settings?.length ?? 0) > 0) {
+    sections.push(
+      toCSV([
+        [],
+        ["## SETTINGS"],
+        ["Section", "Setting", "Value", "Notes"],
+        ...(scene.settings ?? []).map((s) => [s.section, s.name, s.value, s.notes ?? ""]),
+      ]),
+    );
+  }
+
+  if (opts.includeChannelProcessing && hasChannelProcessing(scene)) {
+    sections.push(
+      toCSV([
+        [],
+        ["## CHANNEL PROCESSING"],
+        ["Channel", "Name", "Delay", "Preamp", "Gate", "Dynamics", "EQ", "Main Mix", "Automix"],
+        ...processingSummary(scene),
+      ]),
+    );
+  }
+
+  if (opts.includeChannelSends && hasChannelSends(scene)) {
+    sections.push(
+      toCSV([
+        [],
+        ["## CHANNEL SENDS"],
+        ["Channel", "Name", "Bus", "Enabled", "Level", "Pan", "Tap"],
+        ...sendsSummary(scene),
+      ]),
+    );
+  }
+
+  if (opts.includeUnrecognizedSummary && (scene.unrecognizedCategories?.length ?? 0) > 0) {
+    sections.push(
+      toCSV([
+        [],
+        ["## PARSER CATEGORY SUMMARY"],
+        ["Category", "Count", "Description"],
+        ...(scene.unrecognizedCategories ?? []).map((c) => [c.category, c.count, c.description]),
+      ]),
+    );
+  }
+
+  if (opts.includeUnrecognizedExamples && (scene.unrecognizedCategories?.length ?? 0) > 0) {
+    sections.push(
+      toCSV([
+        [],
+        ["## PARSER CATEGORY EXAMPLES"],
+        ["Category", "Count", "Example"],
+        ...(scene.unrecognizedCategories ?? []).flatMap((c) => c.examples.map((example) => [c.category, c.count, example])),
+      ]),
+    );
+  }
+
+  if (opts.includeRawUnrecognized && scene.unrecognizedLines.length) {
+    sections.push(
+      toCSV([
+        [],
+        ["## RAW UNRECOGNIZED LINE SAMPLE"],
+        ["Line"],
+        ...scene.unrecognizedLines.map((line) => [line]),
+      ]),
+    );
+  }
 
   return sections.join("\n");
 }
