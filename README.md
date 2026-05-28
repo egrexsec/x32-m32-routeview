@@ -488,4 +488,6 @@ The goal is to help engineers quickly understand real-world console scenes under
 
 # License
 
-No license has been defined yet.
+Licensed under the MIT License.
+
+See the `LICENSE` file for full details.
