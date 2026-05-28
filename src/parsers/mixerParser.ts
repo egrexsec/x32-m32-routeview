@@ -22,6 +22,7 @@ export function emptyScene(meta?: { fileName?: string; fileSize?: number }): Mix
     dcas: [],
     outputs: [],
     routingBlocks: [],
+    settings: [],
     warnings: [],
     unrecognizedLines: [],
   };
