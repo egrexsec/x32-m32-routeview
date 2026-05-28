@@ -22,6 +22,13 @@ export interface SceneSetting {
   notes?: string;
 }
 
+export interface UnrecognizedCategory {
+  category: string;
+  description: string;
+  count: number;
+  examples: string[];
+}
+
 export interface ChannelSend {
   bus: number;
   enabled: boolean;
@@ -89,7 +96,8 @@ export interface MixerScene {
   dcas: DCAGroup[];
   outputs: OutputPatch[];
   routingBlocks: RoutingBlock[];
-  settings: SceneSetting[];
+  settings?: SceneSetting[];
+  unrecognizedCategories?: UnrecognizedCategory[];
   warnings: string[];
   unrecognizedLines: string[];
 }
