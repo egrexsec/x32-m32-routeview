@@ -1,8 +1,7 @@
 import { useMemo, useState } from "react";
-import type { InputChannel, MixerScene, MixBus, OutputPatch } from "@/types/routing";
+import type { InputChannel, MixerScene, OutputPatch } from "@/types/routing";
 
 type ColorMeta = { label: string; className: string };
-type BusRole = "monitor" | "stream" | "fx" | "matrix" | "mix";
 
 const COLOR_MAP: Record<string, ColorMeta> = {
   RD: { label: "RED", className: "scribble-rd" },
@@ -34,7 +33,6 @@ function isUnusedChannel(channel: InputChannel): boolean {
   const hasDca = (channel.dcaAssignments ?? []).length > 0;
   const hasActiveSend = (channel.sends ?? []).some((send) => send.enabled && send.level !== "-oo");
   const hasSource = !!channel.source && channel.source !== "—";
-
   return defaultName && !hasDca && !hasActiveSend && !hasSource;
 }
 
@@ -55,29 +53,8 @@ function dcaAssignments(scene: MixerScene) {
     const number = index + 1;
     const dca = scene.dcas.find((item) => item.number === number);
     const assigned = scene.inputs.filter((channel) => (dca?.assignedChannels ?? []).includes(channel.number));
-    return {
-      number,
-      name: dca?.name || `DCA ${number}`,
-      assigned,
-    };
+    return { number, name: dca?.name || `DCA ${number}`, assigned };
   });
-}
-
-function busRole(bus: MixBus): BusRole {
-  const name = bus.name.toLowerCase();
-  if (/monitor|mon|iem|wedge|stage/.test(name)) return "monitor";
-  if (/stream|broadcast|online|record|rec/.test(name)) return "stream";
-  if (/fx|verb|delay|reverb/.test(name)) return "fx";
-  if (/matrix|sub|fill|lobby|foyer/.test(name)) return "matrix";
-  return "mix";
-}
-
-function busTypeLabel(role: BusRole, bus: MixBus): string {
-  if (role === "monitor") return "Stage Monitor";
-  if (role === "stream") return "Broadcast / Stream";
-  if (role === "fx") return "FX Rack Send";
-  if (role === "matrix") return "Matrix / Fill / Subs";
-  return bus.type ?? "Mix Bus";
 }
 
 function sendingChannels(scene: MixerScene, busNumber: number) {
@@ -125,7 +102,7 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
           <h1>{scene.fileName ?? "Scene Documentation"}</h1>
         </div>
         <div className="prod-meta">
-          <div><strong>Show / Scene:</strong> {scene.fileName ?? "—"}</div>
+          <div><strong>Scene File:</strong> {scene.fileName ?? "—"}</div>
           <div><strong>Generated:</strong> {generated}</div>
         </div>
       </header>
@@ -142,10 +119,7 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
 
       <section className="prod-section">
         <div className="prod-section-title">
-          <div>
-            <span className="prod-section-index">01</span>
-            <h2>Main Input Channels</h2>
-          </div>
+          <div><span className="prod-section-index">01</span><h2>Input Channels</h2></div>
           <span>CH 01–32</span>
         </div>
         <div className="prod-table-wrap">
@@ -155,9 +129,9 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
                 <th>Ch</th>
                 <th>Label / Name</th>
                 <th>Color</th>
-                <th>DCA / Subgroup</th>
+                <th>DCA Assignment</th>
                 <th>Preamp / Pad</th>
-                <th>Notes / Use-Case</th>
+                <th>Notes</th>
               </tr>
             </thead>
             <tbody>
@@ -181,31 +155,21 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
 
       <section className="prod-section">
         <div className="prod-section-title">
-          <div>
-            <span className="prod-section-index">02</span>
-            <h2>DCA Groups</h2>
-          </div>
-          <span>Volunteer Fader Map</span>
+          <div><span className="prod-section-index">02</span><h2>DCA Groups</h2></div>
+          <span>DCA 1–8</span>
         </div>
         <div className="dca-grid dca-fader-grid">
           {dcas.map((dca) => (
             <div key={dca.number} className="dca-card dca-fader-card">
-              <div className="dca-card-head">
-                <span className="dca-number">DCA {dca.number}</span>
-                <strong>{dca.name}</strong>
-              </div>
+              <div className="dca-card-head"><span className="dca-number">DCA {dca.number}</span><strong>{dca.name}</strong></div>
               <div className="dca-fader-line" aria-hidden />
               {dca.assigned.length ? (
                 <ul>
                   {dca.assigned.map((channel) => (
-                    <li key={channel.number}>
-                      <span className="prod-mono">{channelNumber(channel.number)}</span> {channelName(channel)}
-                    </li>
+                    <li key={channel.number}><span className="prod-mono">{channelNumber(channel.number)}</span> {channelName(channel)}</li>
                   ))}
                 </ul>
-              ) : (
-                <p className="prod-muted">Unassigned</p>
-              )}
+              ) : <p className="prod-muted">Unassigned</p>}
             </div>
           ))}
         </div>
@@ -213,23 +177,16 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
 
       <section className="prod-section">
         <div className="prod-section-title">
-          <div>
-            <span className="prod-section-index">03</span>
-            <h2>Mix Busses & Aux Sends</h2>
-          </div>
-          <span>Monitor / Stream / FX Overview</span>
+          <div><span className="prod-section-index">03</span><h2>Mix Buses & Channel Sends</h2></div>
+          <span>Bus 01–16</span>
         </div>
         <div className="bus-grid">
           {scene.buses.map((bus) => {
             const sends = sendingChannels(scene, bus.number);
-            const role = busRole(bus);
             return (
               <div key={bus.number} className="bus-card">
-                <div className="bus-card-head">
-                  <strong>Mix Bus {channelNumber(bus.number)}</strong>
-                  <span>{bus.name}</span>
-                </div>
-                <div className={`bus-type bus-role-${role}`}>{busTypeLabel(role, bus)}</div>
+                <div className="bus-card-head"><strong>Bus {channelNumber(bus.number)}</strong><span>{bus.name}</span></div>
+                <div className="bus-type bus-role-mix">{bus.type ?? "Mix Bus"}</div>
                 {sends.length ? (
                   <ul>
                     {sends.map(({ channel, send }) => (
@@ -238,9 +195,7 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
                       </li>
                     ))}
                   </ul>
-                ) : (
-                  <p className="prod-muted">No parsed active sends.</p>
-                )}
+                ) : <p className="prod-muted">No parsed active sends.</p>}
               </div>
             );
           })}
@@ -249,29 +204,16 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
 
       <section className="prod-section">
         <div className="prod-section-title">
-          <div>
-            <span className="prod-section-index">04</span>
-            <h2>Hardware Outputs & Patching</h2>
-          </div>
-          <span>Physical Troubleshooting Map</span>
+          <div><span className="prod-section-index">04</span><h2>Outputs & Routing Blocks</h2></div>
+          <span>Physical / Digital Routing</span>
         </div>
         <div className="patch-grid">
           {xlrGroups.map((group) => (
             <div key={group.label} className="patch-card">
               <h3>{group.label}</h3>
-              <table className="prod-table compact">
-                <tbody>
-                  {group.rows.length ? group.rows.map((output) => (
-                    <tr key={`${group.label}-${output.number}`}>
-                      <td className="prod-mono">Out {output.number}</td>
-                      <td>{output.source}</td>
-                      <td>{output.notes ?? ""}</td>
-                    </tr>
-                  )) : (
-                    <tr><td colSpan={3}>No mapped outputs found.</td></tr>
-                  )}
-                </tbody>
-              </table>
+              <table className="prod-table compact"><tbody>{group.rows.length ? group.rows.map((output) => (
+                <tr key={`${group.label}-${output.number}`}><td className="prod-mono">Out {output.number}</td><td>{output.source}</td><td>{output.notes ?? ""}</td></tr>
+              )) : <tr><td colSpan={3}>No mapped outputs found.</td></tr>}</tbody></table>
             </div>
           ))}
           <PatchBlock title="Local Output Blocks" values={outBlock?.assignments} />
@@ -287,15 +229,7 @@ function PatchBlock({ title, values }: { title: string; values?: string[] }) {
   return (
     <div className="patch-card">
       <h3>{title}</h3>
-      {values?.length ? (
-        <div className="patch-pills">
-          {values.map((value, index) => (
-            <span key={`${title}-${index}`} className="patch-pill">{value}</span>
-          ))}
-        </div>
-      ) : (
-        <p className="prod-muted">No routing block found.</p>
-      )}
+      {values?.length ? <div className="patch-pills">{values.map((value, index) => <span key={`${title}-${index}`} className="patch-pill">{value}</span>)}</div> : <p className="prod-muted">No routing block found.</p>}
     </div>
   );
 }
