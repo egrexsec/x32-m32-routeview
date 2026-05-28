@@ -3,10 +3,10 @@
 //
 // Scene file lines look like:
 //   /ch/01/config "Kick" 1 YE 33
+//   /ch/01/grp %00000001 %000000
 //   /bus/01/config "Drums" 1 RD
-//   /dca/1/config 1 "Band" WH
-//   /headamp/000 0 0
-//   /outputs/main/01 1 0 OFF
+//   /dca/1/config "Band" WH
+//   /outputs/main/01 4 POST OFF
 //   /config/routing/IN AN1-8 AN9-16 AES50A-1-8 ...
 //
 // This parser is intentionally conservative: it extracts what it can recognize,
@@ -29,26 +29,53 @@ import type {
 } from "@/types/routing";
 import { emptyScene, type MixerParser } from "./mixerParser";
 
-// Match a quoted name like "Kick Drum"
+// Match a quoted name like "Kick Drum". Empty labels are valid in X32 scenes.
 const NAME_RE = /"([^"]*)"/;
 
+function cleanLabel(value: string | undefined, fallback: string): string {
+  const trimmed = (value ?? "").trim();
+  return trimmed || fallback;
+}
+
+function decodeBitMask(mask: string | undefined, maxBits: number): number[] {
+  if (!mask?.startsWith("%")) return [];
+  const bits = mask.slice(1);
+  const out: number[] = [];
+
+  // X32 group masks are displayed left-to-right, but DCA 1 is the right-most bit.
+  for (let i = bits.length - 1, group = 1; i >= 0 && group <= maxBits; i -= 1, group += 1) {
+    if (bits[i] === "1") out.push(group);
+  }
+  return out;
+}
+
 function parseChannel(line: string): InputChannel | null {
-  // /ch/01/config "Name" <icon?> <color?> <something>
+  // /ch/01/config "Name" <icon?> <color?> <source?>
   const m = line.match(/^\/ch\/(\d{1,2})\/config\b\s*(.*)$/);
   if (!m) return null;
   const number = parseInt(m[1], 10);
   const rest = m[2] ?? "";
   const nameMatch = rest.match(NAME_RE);
-  const name = nameMatch ? nameMatch[1] : "";
   const tokens = rest.replace(NAME_RE, "").trim().split(/\s+/).filter(Boolean);
   // X32: tokens typically [icon, color, source]
   const icon = tokens[0];
   const color = tokens[1];
+  const source = tokens[2];
   return {
     number,
-    name: name || `Ch ${number}`,
+    name: cleanLabel(nameMatch?.[1], `Ch ${number}`),
+    source,
     icon,
     color,
+  };
+}
+
+function parseChannelDcaAssignment(line: string): { channel: number; dcas: number[] } | null {
+  const m = line.match(/^\/ch\/(\d{1,2})\/grp\b\s+(%[01]{8})\b/);
+  if (!m) return null;
+  return {
+    channel: parseInt(m[1], 10),
+    dcas: decodeBitMask(m[2], 8),
   };
 }
 
@@ -60,7 +87,7 @@ function parseBus(line: string): MixBus | null {
   const nameMatch = rest.match(NAME_RE);
   return {
     number,
-    name: nameMatch ? nameMatch[1] : `Bus ${number}`,
+    name: cleanLabel(nameMatch?.[1], `Bus ${number}`),
     type: "Mix Bus",
   };
 }
@@ -73,7 +100,7 @@ function parseDCA(line: string): DCAGroup | null {
   const nameMatch = rest.match(NAME_RE);
   return {
     number,
-    name: nameMatch ? nameMatch[1] : `DCA ${number}`,
+    name: cleanLabel(nameMatch?.[1], `DCA ${number}`),
     assignedChannels: [],
   };
 }
@@ -85,23 +112,54 @@ interface OutputPattern {
 }
 
 const OUTPUT_PATTERNS: OutputPattern[] = [
-  { re: /^\/outputs\/main\/(\d{2})\b\s*(.*)$/, type: "XLR", numberFrom: (m) => parseInt(m[1], 10) },
-  { re: /^\/outputs\/aux\/(\d{2})\b\s*(.*)$/, type: "Aux", numberFrom: (m) => parseInt(m[1], 10) },
-  { re: /^\/outputs\/p16\/(\d{2})\b\s*(.*)$/, type: "Ultranet", numberFrom: (m) => parseInt(m[1], 10) },
-  { re: /^\/outputs\/aes\/(\d{2})\b\s*(.*)$/, type: "AES50-A", numberFrom: (m) => parseInt(m[1], 10) },
-  { re: /^\/outputs\/rec\/(\d{2})\b\s*(.*)$/, type: "Card", numberFrom: (m) => parseInt(m[1], 10) },
+  // Require whitespace after the output number so child settings like
+  // /outputs/main/01/delay and /outputs/p16/01/iQ are not exported as patches.
+  { re: /^\/outputs\/main\/(\d{2})\s+(.+)$/, type: "XLR", numberFrom: (m) => parseInt(m[1], 10) },
+  { re: /^\/outputs\/aux\/(\d{2})\s+(.+)$/, type: "Aux", numberFrom: (m) => parseInt(m[1], 10) },
+  { re: /^\/outputs\/p16\/(\d{2})\s+(.+)$/, type: "Ultranet", numberFrom: (m) => parseInt(m[1], 10) },
+  { re: /^\/outputs\/aes\/(\d{2})\s+(.+)$/, type: "AES50-A", numberFrom: (m) => parseInt(m[1], 10) },
+  { re: /^\/outputs\/rec\/(\d{2})\s+(.+)$/, type: "Card", numberFrom: (m) => parseInt(m[1], 10) },
   { re: /^\/config\/routing\/MATRIX\b\s*(.*)$/, type: "Matrix", numberFrom: () => "block" },
 ];
+
+function describeOutputSource(code: string): string {
+  const sourceCode = Number.parseInt(code, 10);
+  if (Number.isNaN(sourceCode)) return code;
+
+  if (sourceCode === 0) return "Off";
+  if (sourceCode === 1) return "Main L";
+  if (sourceCode === 2) return "Main R";
+  if (sourceCode === 3) return "Main M/C";
+  if (sourceCode >= 4 && sourceCode <= 19) return `Bus ${sourceCode - 3}`;
+  if (sourceCode >= 20 && sourceCode <= 25) return `Matrix ${sourceCode - 19}`;
+  if (sourceCode >= 26 && sourceCode <= 57) return `Direct Ch ${sourceCode - 25}`;
+  if (sourceCode >= 58 && sourceCode <= 65) return `Aux In ${sourceCode - 57}`;
+  if (sourceCode >= 66 && sourceCode <= 73) return `FX Return ${sourceCode - 65}`;
+
+  return `Source ${sourceCode}`;
+}
 
 function parseOutput(line: string): OutputPatch | null {
   for (const p of OUTPUT_PATTERNS) {
     const m = line.match(p.re);
     if (m) {
-      const args = (m[m.length - 1] ?? "").trim();
+      const args = (m[m.length - 1] ?? "").trim().split(/\s+/).filter(Boolean);
+      const sourceCode = args[0] ?? "";
+      const tap = args[1];
+      const option = args[2];
+      const notes = [
+        tap ? `Tap: ${tap}` : undefined,
+        option ? `Option: ${option}` : undefined,
+        /^\d+$/.test(sourceCode) ? `Raw source: ${sourceCode}` : undefined,
+      ]
+        .filter(Boolean)
+        .join("; ");
+
       return {
         outputType: p.type,
         number: p.numberFrom(m),
-        source: args || "—",
+        source: sourceCode ? describeOutputSource(sourceCode) : "—",
+        notes,
       };
     }
   }
@@ -122,6 +180,39 @@ function parseRoutingBlock(line: string): RoutingBlock | null {
   return { blockName, assignments };
 }
 
+function prettyInputRange(token: string, channelOffset: number): string | undefined {
+  const normalized = token.toUpperCase();
+  const range = normalized.match(/^(AN|A|B|CARD|AUX)(\d+)(?:-(\d+))?$/);
+  if (!range) return token;
+
+  const prefix = range[1];
+  const start = parseInt(range[2], 10);
+  const label =
+    prefix === "AN"
+      ? "Local In"
+      : prefix === "A"
+        ? "AES50-A"
+        : prefix === "B"
+          ? "AES50-B"
+          : prefix === "AUX"
+            ? "Aux In"
+            : "Card";
+
+  return `${label} ${start + channelOffset}`;
+}
+
+function inputSourcesFromRouting(assignments: string[]): Map<number, string> {
+  const map = new Map<number, string>();
+  assignments.slice(0, 4).forEach((token, blockIndex) => {
+    for (let offset = 0; offset < 8; offset += 1) {
+      const channel = blockIndex * 8 + offset + 1;
+      const source = prettyInputRange(token, offset);
+      if (source) map.set(channel, source);
+    }
+  });
+  return map;
+}
+
 function detectIsX32Scene(text: string): boolean {
   return /^#\s*\d+\.\d+/m.test(text) || /\/ch\/\d{2}\/config/.test(text) || /\/bus\/\d{2}\/config/.test(text);
 }
@@ -137,6 +228,8 @@ export const x32M32Parser: MixerParser = {
     const channelMap = new Map<number, InputChannel>();
     const busMap = new Map<number, MixBus>();
     const dcaMap = new Map<number, DCAGroup>();
+    const channelDcaMap = new Map<number, number[]>();
+    let inputRouting: RoutingBlock | undefined;
 
     for (const raw of lines) {
       const line = raw.trim();
@@ -145,6 +238,11 @@ export const x32M32Parser: MixerParser = {
       const ch = parseChannel(line);
       if (ch) {
         channelMap.set(ch.number, { ...(channelMap.get(ch.number) ?? {}), ...ch });
+        continue;
+      }
+      const chDca = parseChannelDcaAssignment(line);
+      if (chDca) {
+        channelDcaMap.set(chDca.channel, chDca.dcas);
         continue;
       }
       const bus = parseBus(line);
@@ -165,6 +263,7 @@ export const x32M32Parser: MixerParser = {
       const block = parseRoutingBlock(line);
       if (block) {
         scene.routingBlocks.push(block);
+        if (block.blockName === "IN") inputRouting = block;
         continue;
       }
 
@@ -174,6 +273,26 @@ export const x32M32Parser: MixerParser = {
           scene.unrecognizedLines.push(line);
         }
       }
+    }
+
+    const inputSourceMap = inputRouting ? inputSourcesFromRouting(inputRouting.assignments) : new Map<number, string>();
+
+    for (const [channel, dcas] of channelDcaMap) {
+      const ch = channelMap.get(channel);
+      if (!ch) continue;
+      ch.dcaAssignments = dcas.map((dcaNumber) => dcaMap.get(dcaNumber)?.name ?? `DCA ${dcaNumber}`);
+      ch.source = inputSourceMap.get(channel) ?? ch.source;
+
+      for (const dcaNumber of dcas) {
+        const dca = dcaMap.get(dcaNumber);
+        if (dca) {
+          dca.assignedChannels = [...(dca.assignedChannels ?? []), channel].sort((a, b) => a - b);
+        }
+      }
+    }
+
+    for (const [channel, ch] of channelMap) {
+      ch.source = inputSourceMap.get(channel) ?? ch.source;
     }
 
     scene.inputs = Array.from(channelMap.values()).sort((a, b) => a.number - b.number);
