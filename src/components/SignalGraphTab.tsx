@@ -7,10 +7,13 @@ function nodeId(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
 
+function matchesText(value: string, query: string): boolean {
+  return value.toLowerCase().includes(query.trim().toLowerCase());
+}
+
 function matchesTrace(trace: SignalTrace, query: string): boolean {
   if (!query.trim()) return true;
-  const q = query.trim().toLowerCase();
-  return trace.path.some((part) => part.toLowerCase().includes(q));
+  return trace.path.some((part) => matchesText(part, query));
 }
 
 export function SignalGraphTab({ scene }: { scene: MixerScene }) {
@@ -32,19 +35,37 @@ export function SignalGraphTab({ scene }: { scene: MixerScene }) {
       inputs.set(`ch-${trace.input.number}`, `CH ${channelNumber(trace.input.number)}\n${channelDisplayName(trace.input)}`);
       if (trace.bus) buses.set(`bus-${trace.bus.number}`, `Bus ${channelNumber(trace.bus.number)}\n${trace.bus.name}`);
       else if (trace.send) buses.set(`bus-${trace.send.bus}`, `Bus ${channelNumber(trace.send.bus)}`);
-      for (const output of trace.outputs) {
-        outputs.set(`${output.outputType}-${output.number}`, `${output.outputType} ${output.number}\n${output.source}`);
-      }
+      for (const output of trace.outputs) outputs.set(`${output.outputType}-${output.number}`, `${output.outputType} ${output.number}\n${output.source}`);
+    }
+
+    // Fallback topology: still show scene structure even when no explicit send/output traces exist.
+    if (!inputs.size && !buses.size && !outputs.size) {
+      const visibleInputs = (activeOnly ? model.activeInputs : model.inputs)
+        .filter(({ channel }) => !query.trim() || matchesText(`CH ${channelNumber(channel.number)} ${channelDisplayName(channel)} ${channel.source ?? ""}`, query))
+        .slice(0, 48);
+      const visibleBuses = (activeOnly ? model.activeBuses : model.buses)
+        .filter(({ bus }) => !query.trim() || matchesText(`Bus ${channelNumber(bus.number)} ${bus.name}`, query))
+        .slice(0, 32);
+      const visibleOutputs = (activeOnly ? model.activeOutputBanks : model.outputBanks)
+        .flatMap((bank) => bank.outputs)
+        .filter((output) => !query.trim() || matchesText(`${output.outputType} ${output.number} ${output.source}`, query))
+        .slice(0, 48);
+
+      for (const { channel } of visibleInputs) inputs.set(`ch-${channel.number}`, `CH ${channelNumber(channel.number)}\n${channelDisplayName(channel)}`);
+      for (const { bus } of visibleBuses) buses.set(`bus-${bus.number}`, `Bus ${channelNumber(bus.number)}\n${bus.name}`);
+      for (const output of visibleOutputs) outputs.set(`${output.outputType}-${output.number}`, `${output.outputType} ${output.number}\n${output.source}`);
     }
 
     return { inputs: Array.from(inputs), buses: Array.from(buses), outputs: Array.from(outputs) };
-  }, [traces]);
+  }, [activeOnly, model.activeBuses, model.activeInputs, model.activeOutputBanks, model.buses, model.inputs, model.outputBanks, query, traces]);
 
-  if (!model.signalTraces.length) {
+  const hasGraphNodes = columns.inputs.length || columns.buses.length || columns.outputs.length;
+
+  if (!hasGraphNodes) {
     return (
       <div className="panel flex items-center gap-2 p-4 text-sm">
         <GitBranch className="h-4 w-4 text-muted-foreground" />
-        <span>No signal traces were derived from this scene yet.</span>
+        <span>No graphable scene topology was found for the current filter.</span>
       </div>
     );
   }
@@ -56,7 +77,7 @@ export function SignalGraphTab({ scene }: { scene: MixerScene }) {
           <div>
             <h3 className="text-sm font-semibold">Visual Signal Graph</h3>
             <p className="mt-1 text-xs text-muted-foreground">
-              Scene-derived topology view showing input channels, mix buses, and mapped outputs. No venue-specific assumptions are used.
+              Scene-derived topology view showing input channels, mix buses, and mapped outputs. If explicit traces are unavailable, this view falls back to the parsed scene structure.
             </p>
           </div>
           <div className="rounded-md border bg-background px-3 py-2 text-right">
@@ -70,7 +91,7 @@ export function SignalGraphTab({ scene }: { scene: MixerScene }) {
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex cursor-pointer items-center gap-2 text-sm">
             <input type="checkbox" checked={activeOnly} onChange={(event) => setActiveOnly(event.target.checked)} />
-            <span>Show active traces only</span>
+            <span>Show active topology only</span>
           </label>
           <div className="relative min-w-[260px] flex-1">
             <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -84,6 +105,12 @@ export function SignalGraphTab({ scene }: { scene: MixerScene }) {
         </div>
       </div>
 
+      {traces.length === 0 ? (
+        <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm text-muted-foreground">
+          No explicit signal traces were derived from sends/output mappings, so the graph is showing parsed topology nodes instead.
+        </div>
+      ) : null}
+
       <div className="signal-graph rounded-lg border bg-background p-4">
         <div className="signal-graph-columns">
           <GraphColumn title="Inputs" nodes={columns.inputs} />
@@ -92,23 +119,25 @@ export function SignalGraphTab({ scene }: { scene: MixerScene }) {
         </div>
       </div>
 
-      <div className="rounded-lg border">
-        <div className="border-b bg-muted/40 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Trace List
+      {traces.length ? (
+        <div className="rounded-lg border">
+          <div className="border-b bg-muted/40 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Trace List
+          </div>
+          <div className="divide-y">
+            {traces.map((trace) => (
+              <div key={trace.id} className="flex flex-wrap items-center gap-2 px-4 py-3 text-sm">
+                {trace.path.map((part, index) => (
+                  <span key={`${trace.id}-${index}`} className="flex items-center gap-2">
+                    {index > 0 ? <span className="text-primary">→</span> : null}
+                    <span className={index === 0 ? "font-semibold" : "text-muted-foreground"}>{part}</span>
+                  </span>
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="divide-y">
-          {traces.map((trace) => (
-            <div key={trace.id} className="flex flex-wrap items-center gap-2 px-4 py-3 text-sm">
-              {trace.path.map((part, index) => (
-                <span key={`${trace.id}-${index}`} className="flex items-center gap-2">
-                  {index > 0 ? <span className="text-primary">→</span> : null}
-                  <span className={index === 0 ? "font-semibold" : "text-muted-foreground"}>{part}</span>
-                </span>
-              ))}
-            </div>
-          ))}
-        </div>
-      </div>
+      ) : null}
     </div>
   );
 }
