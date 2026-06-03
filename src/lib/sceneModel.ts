@@ -66,7 +66,14 @@ export function isActiveSend(send: ChannelSend): boolean {
 
 function outputSourceMatchesBus(output: OutputPatch, busNumber: number): boolean {
   const normalized = output.source.trim().toLowerCase();
-  return normalized === `bus ${busNumber}` || normalized === `mix bus ${busNumber}`;
+  const compact = normalized.replace(/\s+/g, " ");
+
+  return (
+    compact === `bus ${busNumber}` ||
+    compact === `mix bus ${busNumber}` ||
+    compact.startsWith(`bus ${busNumber} `) ||
+    compact.startsWith(`mix bus ${busNumber} `)
+  );
 }
 
 function outputSourceMatchesInput(output: OutputPatch, channelNumberValue: number): boolean {

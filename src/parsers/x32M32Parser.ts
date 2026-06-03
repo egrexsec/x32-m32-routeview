@@ -230,11 +230,22 @@ function parseRoutingBlock(line: string): RoutingBlock | null {
 
 function prettyInputRange(token: string, channelOffset: number): string | undefined {
   const normalized = token.toUpperCase();
-  const range = normalized.match(/^(AN|A|B|CARD|AUX)(\d+)(?:-(\d+))?$/);
+  const range = normalized.match(/^(AN|AUX|CARD|A|B|AES50A|AES50B)-?(\d+)(?:-(\d+))?$/);
   if (!range) return token;
+
   const prefix = range[1];
   const start = parseInt(range[2], 10);
-  const label = prefix === "AN" ? "Local In" : prefix === "A" ? "AES50-A" : prefix === "B" ? "AES50-B" : prefix === "AUX" ? "Aux In" : "Card";
+  const label =
+    prefix === "AN"
+      ? "Local In"
+      : prefix === "A" || prefix === "AES50A"
+        ? "AES50-A"
+        : prefix === "B" || prefix === "AES50B"
+          ? "AES50-B"
+          : prefix === "AUX"
+            ? "Aux In"
+            : "Card";
+
   return `${label} ${start + channelOffset}`;
 }
 

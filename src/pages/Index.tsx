@@ -10,6 +10,7 @@ import { ProductionSheet } from "@/components/ProductionSheet";
 import { ExportTab } from "@/components/ExportTab";
 import { PrintView } from "@/components/PrintView";
 import { WarningsPanel } from "@/components/WarningsPanel";
+import { RouteCoveragePanel } from "@/components/RouteCoveragePanel";
 import { parseSceneText } from "@/parsers/x32M32Parser";
 import { demoScene } from "@/lib/demoScene";
 import type { MixerScene } from "@/types/routing";
@@ -65,6 +66,7 @@ const Index = () => {
           <>
             <RoutingSummary scene={scene} />
             <WarningsPanel scene={scene} />
+            <RouteCoveragePanel scene={scene} />
 
             <section className="panel">
               <Tabs defaultValue="production" className="w-full">
@@ -72,7 +74,7 @@ const Index = () => {
                   <TabsList className="flex flex-wrap">
                     <TabsTrigger value="production">Production Sheet</TabsTrigger>
                     <TabsTrigger value="export">Export</TabsTrigger>
-                    <TabsTrigger value="advanced">Advanced</TabsTrigger>
+                    <TabsTrigger value="advanced">Engineering</TabsTrigger>
                   </TabsList>
                 </div>
                 <div className="p-4 md:p-6">

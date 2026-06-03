@@ -1,65 +1,23 @@
 import { useMemo, useState } from "react";
 import type { MixerScene } from "@/types/routing";
-import { buildDerivedSceneModel, channelDisplayName, channelNumber, type SignalTrace } from "@/lib/sceneModel";
-import { GitBranch, Search } from "lucide-react";
-
-function nodeId(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-}
-
-function matchesText(value: string, query: string): boolean {
-  return value.toLowerCase().includes(query.trim().toLowerCase());
-}
-
-function matchesTrace(trace: SignalTrace, query: string): boolean {
-  if (!query.trim()) return true;
-  return trace.path.some((part) => matchesText(part, query));
-}
+import { GitBranch, Search, Workflow } from "lucide-react";
+import { buildTopologyGraphView, type TopologyNode } from "@/lib/topologyGraph";
 
 export function SignalGraphTab({ scene }: { scene: MixerScene }) {
   const [query, setQuery] = useState("");
   const [activeOnly, setActiveOnly] = useState(true);
-  const model = useMemo(() => buildDerivedSceneModel(scene), [scene]);
 
-  const traces = useMemo(() => {
-    const filtered = model.signalTraces.filter((trace) => matchesTrace(trace, query));
-    return (activeOnly ? filtered.filter((trace) => trace.outputs.length > 0 || trace.send) : filtered).slice(0, 120);
-  }, [activeOnly, model.signalTraces, query]);
+  const topology = useMemo(
+    () => buildTopologyGraphView(scene, { query, activeOnly }),
+    [activeOnly, query, scene],
+  );
 
-  const columns = useMemo(() => {
-    const inputs = new Map<string, string>();
-    const buses = new Map<string, string>();
-    const outputs = new Map<string, string>();
-
-    for (const trace of traces) {
-      inputs.set(`ch-${trace.input.number}`, `CH ${channelNumber(trace.input.number)}\n${channelDisplayName(trace.input)}`);
-      if (trace.bus) buses.set(`bus-${trace.bus.number}`, `Bus ${channelNumber(trace.bus.number)}\n${trace.bus.name}`);
-      else if (trace.send) buses.set(`bus-${trace.send.bus}`, `Bus ${channelNumber(trace.send.bus)}`);
-      for (const output of trace.outputs) outputs.set(`${output.outputType}-${output.number}`, `${output.outputType} ${output.number}\n${output.source}`);
-    }
-
-    // Fallback topology: still show scene structure even when no explicit send/output traces exist.
-    if (!inputs.size && !buses.size && !outputs.size) {
-      const visibleInputs = (activeOnly ? model.activeInputs : model.inputs)
-        .filter(({ channel }) => !query.trim() || matchesText(`CH ${channelNumber(channel.number)} ${channelDisplayName(channel)} ${channel.source ?? ""}`, query))
-        .slice(0, 48);
-      const visibleBuses = (activeOnly ? model.activeBuses : model.buses)
-        .filter(({ bus }) => !query.trim() || matchesText(`Bus ${channelNumber(bus.number)} ${bus.name}`, query))
-        .slice(0, 32);
-      const visibleOutputs = (activeOnly ? model.activeOutputBanks : model.outputBanks)
-        .flatMap((bank) => bank.outputs)
-        .filter((output) => !query.trim() || matchesText(`${output.outputType} ${output.number} ${output.source}`, query))
-        .slice(0, 48);
-
-      for (const { channel } of visibleInputs) inputs.set(`ch-${channel.number}`, `CH ${channelNumber(channel.number)}\n${channelDisplayName(channel)}`);
-      for (const { bus } of visibleBuses) buses.set(`bus-${bus.number}`, `Bus ${channelNumber(bus.number)}\n${bus.name}`);
-      for (const output of visibleOutputs) outputs.set(`${output.outputType}-${output.number}`, `${output.outputType} ${output.number}\n${output.source}`);
-    }
-
-    return { inputs: Array.from(inputs), buses: Array.from(buses), outputs: Array.from(outputs) };
-  }, [activeOnly, model.activeBuses, model.activeInputs, model.activeOutputBanks, model.buses, model.inputs, model.outputBanks, query, traces]);
-
-  const hasGraphNodes = columns.inputs.length || columns.buses.length || columns.outputs.length;
+  const hasGraphNodes =
+    topology.inputs.length || topology.buses.length || topology.outputs.length || topology.routingBlocks.length;
+  const nodeLookup = useMemo(
+    () => new Map(topology.graph.nodes.map((node) => [node.id, node] as const)),
+    [topology.graph.nodes],
+  );
 
   if (!hasGraphNodes) {
     return (
@@ -77,12 +35,15 @@ export function SignalGraphTab({ scene }: { scene: MixerScene }) {
           <div>
             <h3 className="text-sm font-semibold">Visual Signal Graph</h3>
             <p className="mt-1 text-xs text-muted-foreground">
-              Scene-derived topology view showing input channels, mix buses, and mapped outputs. If explicit traces are unavailable, this view falls back to the parsed scene structure.
+              Normalized topology view showing parsed routing entities. This is not React Flow yet, but it now runs on a
+              reusable node-edge model instead of ad hoc UI grouping.
             </p>
           </div>
-          <div className="rounded-md border bg-background px-3 py-2 text-right">
-            <div className="text-xs uppercase tracking-wide text-muted-foreground">Visible Traces</div>
-            <div className="font-mono text-xl font-semibold">{traces.length}</div>
+          <div className="grid grid-cols-2 gap-2 text-right md:grid-cols-4">
+            <GraphStat label="Nodes" value={topology.graph.nodes.length} />
+            <GraphStat label="Edges" value={topology.graph.edges.length} />
+            <GraphStat label="Visible" value={topology.inputs.length + topology.buses.length + topology.outputs.length} />
+            <GraphStat label="Routes" value={topology.summary.signalTraceCount} />
           </div>
         </div>
       </div>
@@ -98,67 +59,80 @@ export function SignalGraphTab({ scene }: { scene: MixerScene }) {
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Filter graph by channel, bus, output..."
+              placeholder="Filter graph by channel, bus, output, route block..."
               className="w-full rounded-md border bg-background py-2 pl-9 pr-3 text-sm"
             />
           </div>
         </div>
       </div>
 
-      {traces.length === 0 ? (
+      {topology.edges.length === 0 ? (
         <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm text-muted-foreground">
-          No explicit signal traces were derived from sends/output mappings, so the graph is showing parsed topology nodes instead.
+          The current filter leaves no visible route edges. Clear the search or include inactive topology to inspect the
+          full parse model.
         </div>
       ) : null}
 
       <div className="signal-graph rounded-lg border bg-background p-4">
-        <div className="signal-graph-columns">
-          <GraphColumn title="Inputs" nodes={columns.inputs} />
-          <GraphColumn title="Buses" nodes={columns.buses} />
-          <GraphColumn title="Outputs" nodes={columns.outputs} />
+        <div className="signal-graph-columns signal-graph-columns--wide">
+          <GraphColumn title="Route Blocks" nodes={topology.routingBlocks} emptyLabel="No routing block nodes" />
+          <GraphColumn title="Inputs" nodes={topology.inputs} emptyLabel="No input nodes" />
+          <GraphColumn title="Buses" nodes={topology.buses} emptyLabel="No bus nodes" />
+          <GraphColumn title="Outputs" nodes={topology.outputs} emptyLabel="No output nodes" />
         </div>
       </div>
 
-      {traces.length ? (
-        <div className="rounded-lg border">
-          <div className="border-b bg-muted/40 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Trace List
-          </div>
-          <div className="divide-y">
-            {traces.map((trace) => (
-              <div key={trace.id} className="flex flex-wrap items-center gap-2 px-4 py-3 text-sm">
-                {trace.path.map((part, index) => (
-                  <span key={`${trace.id}-${index}`} className="flex items-center gap-2">
-                    {index > 0 ? <span className="text-primary">→</span> : null}
-                    <span className={index === 0 ? "font-semibold" : "text-muted-foreground"}>{part}</span>
-                  </span>
-                ))}
-              </div>
-            ))}
-          </div>
+      <div className="rounded-lg border">
+        <div className="border-b bg-muted/40 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Edge List
         </div>
-      ) : null}
+        <div className="divide-y">
+          {topology.edges.length ? (
+            topology.edges.map((edge) => (
+              <div key={edge.id} className="flex flex-wrap items-center gap-2 px-4 py-3 text-sm">
+                <span className="rounded-full border bg-background px-2 py-0.5 font-mono text-[11px] uppercase tracking-wide text-muted-foreground">
+                  {edge.kind}
+                </span>
+                <span className="font-semibold">{nodeLookup.get(edge.source)?.label ?? edge.source}</span>
+                <Workflow className="h-3.5 w-3.5 text-primary" />
+                <span className="text-muted-foreground">{nodeLookup.get(edge.target)?.label ?? edge.target}</span>
+                {edge.label ? <span className="text-xs text-muted-foreground">({edge.label})</span> : null}
+              </div>
+            ))
+          ) : (
+            <div className="px-4 py-3 text-sm text-muted-foreground">No visible edges matched the current filter.</div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
 
-function GraphColumn({ title, nodes }: { title: string; nodes: [string, string][] }) {
+function GraphStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-md border bg-background px-3 py-2">
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className="font-mono text-lg font-semibold tabular-nums">{value}</div>
+    </div>
+  );
+}
+
+function GraphColumn({ title, nodes, emptyLabel }: { title: string; nodes: TopologyNode[]; emptyLabel: string }) {
   return (
     <div className="signal-graph-column">
       <div className="signal-graph-title">{title}</div>
       <div className="signal-graph-node-list">
-        {nodes.length ? nodes.map(([id, label]) => <GraphNode key={id} id={id} label={label} />) : <p className="text-xs text-muted-foreground">None</p>}
+        {nodes.length ? nodes.map((node) => <GraphNode key={node.id} node={node} />) : <p className="text-xs text-muted-foreground">{emptyLabel}</p>}
       </div>
     </div>
   );
 }
 
-function GraphNode({ id, label }: { id: string; label: string }) {
+function GraphNode({ node }: { node: TopologyNode }) {
   return (
-    <div className="signal-graph-node" data-node-id={nodeId(id)}>
-      {label.split("\n").map((line, index) => (
-        <span key={`${id}-${index}`} className={index === 0 ? "font-mono font-semibold" : "text-muted-foreground"}>{line}</span>
-      ))}
+    <div className="signal-graph-node" data-node-id={node.id}>
+      <span className="font-mono font-semibold">{node.label}</span>
+      {node.secondaryLabel ? <span className="text-muted-foreground">{node.secondaryLabel}</span> : null}
     </div>
   );
 }

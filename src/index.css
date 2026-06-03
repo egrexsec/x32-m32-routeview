@@ -356,6 +356,62 @@
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 0.75rem;
   }
+
+  .signal-graph-columns {
+    display: grid;
+    gap: 0.85rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .signal-graph-columns--wide {
+    grid-template-columns: minmax(180px, 0.8fr) repeat(3, minmax(0, 1fr));
+  }
+
+  .signal-graph-column {
+    display: flex;
+    min-height: 18rem;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .signal-graph-title {
+    border-bottom: 1px solid hsl(var(--border));
+    padding-bottom: 0.5rem;
+    font-size: 0.72rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .signal-graph-node-list {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+
+  .signal-graph-node {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    border: 1px solid hsl(var(--border));
+    border-radius: 0.65rem;
+    background: linear-gradient(180deg, hsl(var(--card)) 0%, hsl(var(--muted) / 0.45) 100%);
+    padding: 0.65rem 0.75rem;
+    box-shadow: inset 0 1px 0 hsl(var(--foreground) / 0.03);
+  }
+}
+
+@media (max-width: 1024px) {
+  .signal-graph-columns,
+  .signal-graph-columns--wide {
+    grid-template-columns: 1fr;
+  }
+
+  .signal-graph-column {
+    min-height: 0;
+  }
 }
 
 @media screen { .print-view { display: none !important; } }
