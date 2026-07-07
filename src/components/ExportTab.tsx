@@ -6,11 +6,14 @@ import {
   defaultExportOptions,
   downloadText,
   parserBucketGroupLabels,
+  sceneToHtml,
+  sceneToJson,
   sceneToMarkdown,
+  sceneToPlainText,
   type ExportOptions,
   type ParserBucketGroup,
 } from "@/lib/exporters";
-import { Copy, Download, Printer, FileText, FileSpreadsheet, Settings2 } from "lucide-react";
+import { Copy, Download, Printer, FileText, FileSpreadsheet, Settings2, Braces, Code2 } from "lucide-react";
 import { toast } from "sonner";
 
 export function ExportTab({ scene }: { scene: MixerScene }) {
@@ -21,6 +24,9 @@ export function ExportTab({ scene }: { scene: MixerScene }) {
   const [copied, setCopied] = useState(false);
 
   const md = useMemo(() => sceneToMarkdown(scene, exportOptions), [scene, exportOptions]);
+  const html = useMemo(() => sceneToHtml(scene, exportOptions), [scene, exportOptions]);
+  const json = useMemo(() => sceneToJson(scene), [scene]);
+  const plainText = useMemo(() => sceneToPlainText(scene, exportOptions), [scene, exportOptions]);
   const base = (scene.fileName ?? "scene").replace(/\.[^.]+$/, "");
 
   const updateOption = <K extends keyof ExportOptions>(key: K, value: ExportOptions[K]) => {
@@ -42,8 +48,8 @@ export function ExportTab({ scene }: { scene: MixerScene }) {
     <div className="grid gap-4 lg:grid-cols-[1fr_1.2fr]">
       <div className="space-y-4">
         <ExportCard
-          title="Markdown Cheatsheet"
-          description="Professional, sectioned Markdown document with Inputs, Buses, DCAs and Outputs — ready for run-of-show docs and team handoffs."
+          title="Markdown"
+          description="Sectioned documentation for run-of-show docs, volunteer handoffs, and repo-friendly notes."
           icon={FileText}
         >
           <div className="flex flex-wrap gap-2">
@@ -72,8 +78,56 @@ export function ExportTab({ scene }: { scene: MixerScene }) {
         </ExportCard>
 
         <ExportCard
-          title="CSV Export"
-          description="Single CSV containing routing data plus any selected Parser Bucket sections. Opens in Excel, Google Sheets or Numbers."
+          title="HTML"
+          description="Standalone, printable HTML that preserves tables and scene structure."
+          icon={Code2}
+        >
+          <Button
+            size="sm"
+            onClick={() => {
+              downloadText(`${base}-routing.html`, html, "text/html");
+              toast.success("HTML downloaded");
+            }}
+          >
+            <Download className="mr-1.5 h-4 w-4" /> Download .html
+          </Button>
+        </ExportCard>
+
+        <ExportCard
+          title="JSON"
+          description="Structured export for archiving, automation, and future RouteView imports."
+          icon={Braces}
+        >
+          <Button
+            size="sm"
+            onClick={() => {
+              downloadText(`${base}-routing.json`, json, "application/json");
+              toast.success("JSON downloaded");
+            }}
+          >
+            <Download className="mr-1.5 h-4 w-4" /> Download .json
+          </Button>
+        </ExportCard>
+
+        <ExportCard
+          title="Plain Text"
+          description="Readable text for email, service notes, and systems that do not handle Markdown."
+          icon={FileText}
+        >
+          <Button
+            size="sm"
+            onClick={() => {
+              downloadText(`${base}-routing.txt`, plainText, "text/plain");
+              toast.success("Plain text downloaded");
+            }}
+          >
+            <Download className="mr-1.5 h-4 w-4" /> Download .txt
+          </Button>
+        </ExportCard>
+
+        <ExportCard
+          title="CSV"
+          description="Single CSV containing routing data plus selected Parser Bucket sections. Opens in Excel, Google Sheets, or Numbers."
           icon={FileSpreadsheet}
         >
           <Button
