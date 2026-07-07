@@ -18,7 +18,7 @@ const COLOR_MAP: Record<string, ColorMeta> = {
   CY: { label: "CYAN", className: "scribble-cy" },
   MG: { label: "MAGENTA", className: "scribble-mg" },
   WH: { label: "WHITE", className: "scribble-wh" },
-  OFF: { label: "—", className: "scribble-off" },
+  OFF: { label: "-", className: "scribble-off" },
 };
 
 function colorMeta(color?: string): ColorMeta {
@@ -26,11 +26,11 @@ function colorMeta(color?: string): ColorMeta {
 }
 
 function preampLabel(channel: InputChannel): string {
-  return channel.processing?.preamp || "—";
+  return channel.processing?.preamp || "-";
 }
 
 function dcaLabel(channel: InputChannel): string {
-  return (channel.dcaAssignments ?? []).join(", ") || "—";
+  return (channel.dcaAssignments ?? []).join(", ") || "-";
 }
 
 function dcaAssignments(scene: MixerScene) {
@@ -44,6 +44,20 @@ function dcaAssignments(scene: MixerScene) {
 
 function matchesQuery(value: string, query: string): boolean {
   return value.toLowerCase().includes(query.trim().toLowerCase());
+}
+
+function Highlight({ value, query }: { value: string; query: string }) {
+  const trimmed = query.trim();
+  if (!trimmed) return <>{value}</>;
+  const index = value.toLowerCase().indexOf(trimmed.toLowerCase());
+  if (index < 0) return <>{value}</>;
+  return (
+    <>
+      {value.slice(0, index)}
+      <mark className="rounded-sm bg-warning/35 px-0.5 text-foreground">{value.slice(index, index + trimmed.length)}</mark>
+      {value.slice(index + trimmed.length)}
+    </>
+  );
 }
 
 function traceMatches(trace: SignalTrace, query: string): boolean {
@@ -92,7 +106,7 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
           <h1>{scene.fileName ?? "Scene Documentation"}</h1>
         </div>
         <div className="prod-meta">
-          <div><strong>Scene File:</strong> {scene.fileName ?? "—"}</div>
+          <div><strong>Scene File:</strong> {scene.fileName ?? "-"}</div>
           <div><strong>Generated:</strong> {generated}</div>
         </div>
       </header>
@@ -109,7 +123,7 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
             placeholder="Quick find: channel, bus, output, route..."
             className="min-w-[260px] flex-1 rounded-md border bg-background px-3 py-2 text-sm"
           />
-          <span>{inputChannels.length} input · {visibleBuses.length} bus · {visibleOutputBanks.length} output bank</span>
+          <span>{inputChannels.length} input / {visibleBuses.length} bus / {visibleOutputBanks.length} output bank</span>
         </div>
       ) : null}
 
@@ -124,7 +138,7 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
                 return (
                   <tr key={channel.number} className={isDefaultOrUnusedInput(channel) ? "opacity-70" : undefined}>
                     <td className="prod-mono">{channelNumber(channel.number)}</td>
-                    <td className="prod-strong">{channelDisplayName(channel)}</td>
+                    <td className="prod-strong"><Highlight value={channelDisplayName(channel)} query={query} /></td>
                     <td><span className={`scribble-chip ${meta.className}`}>{meta.label}</span></td>
                     <td>{dcaLabel(channel)}</td>
                     <td>{preampLabel(channel)}</td>
@@ -134,6 +148,7 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
               })}
             </tbody>
           </table>
+          {!inputChannels.length ? <p className="prod-empty">No input channels found. Try clearing search or showing inactive items.</p> : null}
         </div>
       </section>
 
@@ -164,7 +179,7 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
               {sendingInputs.length ? (
                 <ul>
                   {sendingInputs.map(({ channel, send }) => (
-                    <li key={`${bus.number}-${channel.number}`}><span className="prod-mono">CH {channelNumber(channel.number)}</span> {channelDisplayName(channel)} — {send.level} {send.tap ? `(${send.tap})` : ""}</li>
+                    <li key={`${bus.number}-${channel.number}`}><span className="prod-mono">CH {channelNumber(channel.number)}</span> <Highlight value={channelDisplayName(channel)} query={query} /> - {send.level} {send.tap ? `(${send.tap})` : ""}</li>
                   ))}
                 </ul>
               ) : <p className="prod-muted">No parsed active sends.</p>}
@@ -213,7 +228,7 @@ function TraceCard({ trace }: { trace: SignalTrace }) {
     <div className="trace-card">
       {trace.path.map((part, index) => (
         <span key={`${trace.id}-${index}`}>
-          {index > 0 ? <b>→</b> : null}
+          {index > 0 ? <b>-&gt;</b> : null}
           {part}
         </span>
       ))}
