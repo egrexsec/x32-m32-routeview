@@ -343,3 +343,94 @@ export function downloadText(filename: string, contents: string, mime = "text/pl
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
+function escapeHtml(value: string | number | undefined): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function htmlTable(headers: string[], rows: (string | number | undefined)[][]): string {
+  return `<table><thead><tr>${headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("")}</tr></thead><tbody>${rows
+    .map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`)
+    .join("")}</tbody></table>`;
+}
+
+export function sceneToHtml(scene: MixerScene, options?: ExportOptions): string {
+  const markdown = sceneToMarkdown(scene, options);
+  const generated = new Date(scene.parsedAt).toLocaleString();
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${escapeHtml(scene.fileName ?? "RouteView Documentation")}</title>
+  <style>
+    :root { color-scheme: light; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; color: #111827; background: #f8fafc; }
+    body { margin: 0; padding: 32px; }
+    main { max-width: 1120px; margin: 0 auto; background: #fff; border: 1px solid #dbe3ef; border-radius: 12px; padding: 32px; box-shadow: 0 20px 55px -35px rgba(15, 23, 42, .35); }
+    h1 { margin: 0 0 8px; font-size: 30px; }
+    h2 { margin-top: 30px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; font-size: 18px; }
+    .meta { color: #475569; margin-bottom: 24px; }
+    table { width: 100%; border-collapse: collapse; margin: 12px 0 24px; font-size: 13px; }
+    th, td { border: 1px solid #dbe3ef; padding: 8px 10px; text-align: left; vertical-align: top; }
+    th { background: #f1f5f9; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+    pre { white-space: pre-wrap; background: #0f172a; color: #e2e8f0; padding: 16px; border-radius: 8px; overflow: auto; }
+    @media print { body { padding: 0; background: #fff; } main { border: 0; box-shadow: none; } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>X32 / M32 RouteView Documentation</h1>
+    <p class="meta">Generated ${escapeHtml(generated)} from ${escapeHtml(scene.fileName ?? "scene text")}. Processed locally by RouteView.</p>
+    <h2>Overview</h2>
+    ${htmlTable(["Field", "Value"], [
+      ["Mixer", scene.mixerType],
+      ["Parse status", scene.status],
+      ["Inputs", scene.inputs.length],
+      ["Mix buses", scene.buses.length],
+      ["DCA groups", scene.dcas.length],
+      ["Output patches", scene.outputs.length],
+      ["Warnings", scene.warnings.length],
+    ])}
+    <h2>Inputs</h2>
+    ${htmlTable(["Ch", "Name", "Source", "DCA", "Color", "Notes"], scene.inputs.map((c) => [c.number, c.name, c.source ?? "", (c.dcaAssignments ?? []).join(", "), c.color ?? "", c.notes ?? ""]))}
+    <h2>Mix Buses</h2>
+    ${htmlTable(["Bus", "Name", "Type", "Notes"], scene.buses.map((b) => [b.number, b.name, b.type ?? "", b.notes ?? ""]))}
+    <h2>DCA Groups</h2>
+    ${htmlTable(["DCA", "Name", "Assigned Channels"], scene.dcas.map((d) => [d.number, d.name, (d.assignedChannels ?? []).join(", ")]))}
+    <h2>Output Patches</h2>
+    ${htmlTable(["Type", "#", "Source", "Notes"], scene.outputs.map((o) => [o.outputType, o.number, o.source, o.notes ?? ""]))}
+    ${scene.warnings.length ? `<h2>Warnings</h2><ul>${scene.warnings.map((warning) => `<li>${escapeHtml(warning)}</li>`).join("")}</ul>` : ""}
+    <h2>Markdown Source</h2>
+    <pre>${escapeHtml(markdown)}</pre>
+  </main>
+</body>
+</html>`;
+}
+
+export function sceneToJson(scene: MixerScene): string {
+  return JSON.stringify(
+    {
+      generatedBy: "X32/M32 RouteView",
+      generatedAt: new Date(scene.parsedAt).toISOString(),
+      privacy: "Processed locally in the browser. Scene data is not uploaded.",
+      scene,
+    },
+    null,
+    2,
+  );
+}
+
+export function sceneToPlainText(scene: MixerScene, options?: ExportOptions): string {
+  return sceneToMarkdown(scene, options)
+    .replace(/^#+\s*/gm, "")
+    .replace(/\*\*/g, "")
+    .replace(/`/g, "")
+    .replace(/\|/g, " ")
+    .replace(/---/g, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+}
