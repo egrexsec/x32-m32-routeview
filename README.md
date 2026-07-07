@@ -100,6 +100,8 @@ Open `http://localhost:8080`.
 
 ## Usage
 
+See [docs/demo-workflow.md](docs/demo-workflow.md) for a step-by-step local demo and operator handoff walkthrough.
+
 ### Sample workflow
 
 1. open RouteView in the browser
