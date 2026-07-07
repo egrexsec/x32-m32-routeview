@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { FileUp, FileText, Sparkles, Trash2 } from "lucide-react";
+import { CheckCircle2, FileText, FileUp, RefreshCcw, Sparkles, Trash2, X } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { StatusBadge } from "./StatusBadge";
@@ -13,31 +13,125 @@ interface Props {
   onClear: () => void;
 }
 
+const MAX_SCENE_BYTES = 10 * 1024 * 1024;
+const ACCEPTED_EXTENSIONS = [".scn", ".txt"];
+const STAGES = [
+  "Reading file",
+  "Parsing scene",
+  "Reading routing",
+  "Analyzing inputs",
+  "Analyzing outputs",
+  "Generating documentation",
+  "Building search index",
+  "Finalizing",
+];
+
+type UploadState =
+  | { kind: "idle"; message?: string }
+  | { kind: "processing"; stage: string; fileName: string }
+  | { kind: "success"; message: string }
+  | { kind: "error"; message: string };
+
 function formatBytes(n?: number) {
-  if (!n && n !== 0) return "—";
+  if (!n && n !== 0) return "-";
   if (n < 1024) return `${n} B`;
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
   return `${(n / 1024 / 1024).toFixed(2)} MB`;
 }
 
+function validateFile(file: File): string | null {
+  const extension = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
+  if (!ACCEPTED_EXTENSIONS.includes(extension)) {
+    return "Choose an X32/M32 .scn file. Plain-text scene exports are also accepted.";
+  }
+  if (file.size === 0) return "That file is empty. Export the scene from your console or X32-Edit, then try again.";
+  if (file.size > MAX_SCENE_BYTES) {
+    return `Scene files must be ${formatBytes(MAX_SCENE_BYTES)} or smaller. This file is ${formatBytes(file.size)}.`;
+  }
+  return null;
+}
+
 export function UploadPanel({ scene, onParseText, onLoadDemo, onClear }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const readerRef = useRef<FileReader | null>(null);
   const [pasted, setPasted] = useState("");
   const [dragging, setDragging] = useState(false);
+  const [uploadState, setUploadState] = useState<UploadState>({ kind: "idle" });
 
   const handleFile = useCallback(
     (file: File) => {
+      const validationError = validateFile(file);
+      if (validationError) {
+        setUploadState({ kind: "error", message: validationError });
+        toast.error("Scene file not accepted");
+        return;
+      }
+
+      setUploadState({ kind: "processing", stage: STAGES[0], fileName: file.name });
       const reader = new FileReader();
+      readerRef.current = reader;
+
       reader.onload = () => {
-        const text = String(reader.result ?? "");
-        onParseText(text, { fileName: file.name, fileSize: file.size });
-        toast.success(`Parsed ${file.name}`);
+        try {
+          const text = String(reader.result ?? "");
+          const stages = text.length > 120_000 ? STAGES : [STAGES[1], STAGES[2], STAGES[5], STAGES[7]];
+          let stageIndex = 0;
+          const runNextStage = () => {
+            setUploadState({ kind: "processing", stage: stages[stageIndex], fileName: file.name });
+            stageIndex += 1;
+            if (stageIndex < stages.length) {
+              window.requestAnimationFrame(runNextStage);
+              return;
+            }
+            onParseText(text, { fileName: file.name, fileSize: file.size });
+            setUploadState({ kind: "success", message: `${file.name} parsed successfully.` });
+            toast.success(`Parsed ${file.name}`);
+            readerRef.current = null;
+          };
+          window.requestAnimationFrame(runNextStage);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "RouteView could not parse this scene.";
+          setUploadState({
+            kind: "error",
+            message: `${message} Confirm the file is a valid X32/M32 scene export and try again.`,
+          });
+          toast.error("Scene parse failed");
+        }
       };
-      reader.onerror = () => toast.error("Could not read file");
+
+      reader.onabort = () => {
+        setUploadState({ kind: "idle", message: "Upload canceled." });
+        readerRef.current = null;
+      };
+      reader.onerror = () => {
+        setUploadState({ kind: "error", message: "RouteView could not read that file. Check file permissions and try again." });
+        toast.error("Could not read file");
+        readerRef.current = null;
+      };
       reader.readAsText(file);
     },
     [onParseText],
   );
+
+  const cancelUpload = () => {
+    if (readerRef.current?.readyState === FileReader.LOADING) readerRef.current.abort();
+    setUploadState({ kind: "idle", message: "Upload canceled." });
+  };
+
+  const parsePastedText = () => {
+    const text = pasted.trim();
+    if (!text) return;
+    try {
+      setUploadState({ kind: "processing", stage: "Parsing pasted scene", fileName: "pasted-scene.scn" });
+      onParseText(text, { fileName: "pasted-scene.scn", fileSize: text.length });
+      setUploadState({ kind: "success", message: "Pasted scene parsed successfully." });
+      toast.success("Parsed pasted scene");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "RouteView could not parse the pasted scene.";
+      setUploadState({ kind: "error", message });
+      toast.error("Scene parse failed");
+    }
+  };
 
   return (
     <section className="panel panel-bg p-5 md:p-6">
@@ -47,88 +141,95 @@ export function UploadPanel({ scene, onParseText, onLoadDemo, onClear }: Props) 
           <p className="text-sm text-muted-foreground">
             Drag in a Behringer X32 or Midas M32 <code className="font-mono">.scn</code> file, or paste scene text below.
           </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Processed locally in your browser. Accepted: .scn or plain-text scene exports up to {formatBytes(MAX_SCENE_BYTES)}.
+          </p>
         </div>
         <div className="flex gap-2 no-print">
           <Button variant="outline" size="sm" onClick={onLoadDemo}>
             <Sparkles className="mr-1.5 h-4 w-4" /> Try Demo Data
           </Button>
-          {scene && (
-            <Button variant="ghost" size="sm" onClick={onClear}>
+          {scene ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                onClear();
+                setUploadState({ kind: "idle" });
+              }}
+            >
               <Trash2 className="mr-1.5 h-4 w-4" /> Clear
             </Button>
-          )}
+          ) : null}
         </div>
       </div>
 
       <div className="mt-5 grid gap-4 md:grid-cols-2">
         <div
-          onDragOver={(e) => {
-            e.preventDefault();
+          onDragOver={(event) => {
+            event.preventDefault();
             setDragging(true);
           }}
           onDragLeave={() => setDragging(false)}
-          onDrop={(e) => {
-            e.preventDefault();
+          onDrop={(event) => {
+            event.preventDefault();
             setDragging(false);
-            const f = e.dataTransfer.files?.[0];
-            if (f) handleFile(f);
+            const file = event.dataTransfer.files?.[0];
+            if (file) handleFile(file);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              inputRef.current?.click();
+            }
           }}
           className={[
-            "relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 text-center transition",
+            "relative flex min-h-[15rem] flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 text-center transition",
             dragging ? "border-primary bg-primary/5" : "border-border bg-muted/40",
           ].join(" ")}
+          role="button"
+          tabIndex={0}
+          aria-label="Upload an X32 or M32 scene file"
         >
           <FileUp className="h-8 w-8 text-muted-foreground" />
-          <p className="mt-3 text-sm font-medium">Drop .scn file here</p>
-          <p className="text-xs text-muted-foreground">or</p>
-          <Button
-            size="sm"
-            className="mt-2"
-            onClick={() => inputRef.current?.click()}
-          >
-            Choose File
+          <p className="mt-3 text-sm font-medium">{scene ? "Replace scene file" : "Drop .scn file here"}</p>
+          <p className="text-xs text-muted-foreground">or browse from your computer</p>
+          <Button size="sm" className="mt-2" onClick={() => inputRef.current?.click()}>
+            {scene ? <RefreshCcw className="mr-1.5 h-4 w-4" /> : null}
+            {scene ? "Replace File" : "Choose File"}
           </Button>
           <input
             ref={inputRef}
             type="file"
             accept=".scn,.txt,text/plain"
             className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) handleFile(f);
-              e.target.value = "";
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) handleFile(file);
+              event.target.value = "";
             }}
           />
         </div>
 
         <div className="flex flex-col">
-          <label className="text-xs font-medium text-muted-foreground">
-            Or paste scene text
-          </label>
+          <label className="text-xs font-medium text-muted-foreground">Or paste scene text</label>
           <Textarea
             value={pasted}
-            onChange={(e) => setPasted(e.target.value)}
+            onChange={(event) => setPasted(event.target.value)}
             placeholder={`# 4.06\n/ch/01/config "Kick" 1 YE 33\n/bus/01/config "Drums" 1 RD ...`}
             className="mt-1 h-32 font-mono text-xs"
           />
-          <Button
-            size="sm"
-            variant="secondary"
-            className="mt-2 self-end"
-            disabled={!pasted.trim()}
-            onClick={() => {
-              onParseText(pasted, { fileName: "pasted-scene.scn", fileSize: pasted.length });
-              toast.success("Parsed pasted scene");
-            }}
-          >
+          <Button size="sm" variant="secondary" className="mt-2 self-end" disabled={!pasted.trim()} onClick={parsePastedText}>
             <FileText className="mr-1.5 h-4 w-4" /> Parse Text
           </Button>
         </div>
       </div>
 
-      {scene && (
+      <UploadStatus state={uploadState} onCancel={cancelUpload} />
+
+      {scene ? (
         <div className="mt-5 grid gap-3 rounded-md border bg-background p-3 md:grid-cols-4">
-          <Meta label="File" value={scene.fileName ?? "—"} mono />
+          <Meta label="File" value={scene.fileName ?? "-"} mono />
           <Meta label="Size" value={formatBytes(scene.fileSize)} />
           <Meta label="Mixer" value={scene.mixerType} />
           <div>
@@ -138,8 +239,34 @@ export function UploadPanel({ scene, onParseText, onLoadDemo, onClear }: Props) 
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </section>
+  );
+}
+
+function UploadStatus({ state, onCancel }: { state: UploadState; onCancel: () => void }) {
+  if (state.kind === "idle" && !state.message) return null;
+
+  const tone =
+    state.kind === "error"
+      ? "border-destructive/40 bg-destructive/10 text-destructive"
+      : state.kind === "success"
+        ? "border-success/40 bg-success/10 text-success"
+        : "border-primary/35 bg-primary/10 text-primary";
+
+  return (
+    <div className={`mt-4 flex flex-wrap items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm ${tone}`} role="status" aria-live="polite">
+      <div className="flex items-center gap-2">
+        {state.kind === "success" ? <CheckCircle2 className="h-4 w-4" /> : null}
+        {state.kind === "processing" ? <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-current" aria-hidden /> : null}
+        <span>{state.kind === "processing" ? `${state.stage} - ${state.fileName}` : state.message}</span>
+      </div>
+      {state.kind === "processing" ? (
+        <Button size="sm" variant="ghost" onClick={onCancel}>
+          <X className="mr-1.5 h-4 w-4" /> Cancel
+        </Button>
+      ) : null}
+    </div>
   );
 }
 
