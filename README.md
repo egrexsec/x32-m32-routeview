@@ -28,22 +28,27 @@ X32/M32 scene files are powerful, but they are not a friendly operating document
 
 ## Current status
 
-**Active prototype / early product.**
+**Production-focused local documentation tool.**
 
 Confirmed in the repository today:
-- `.scn` upload and parsing for X32/M32 scene files
+- validated drag-and-drop, browse, paste, replace, and cancel upload paths
+- local `.scn` parsing for X32/M32 scene files; scene data is not uploaded
 - normalized scene model for channels, buses, DCAs, outputs, and routing blocks
 - conservative parser behavior that keeps unknown/unhandled lines visible
-- export helpers for markdown and CSV outputs
+- instant client-side search inside the generated production sheet
+- exports for Markdown, HTML, JSON, plain text, CSV, and browser print/PDF
 - tests around parser, scene model, and topology graph behavior
-- browser UI for upload, demo data, and documentation-oriented views
+- browser UI for upload, demo data, documentation review, and professional handoff
 
 ## Features
 
 - `.scn` upload/parsing for X32 / M32 scene files
+- drag-and-drop upload with file type and size validation
+- clear processing status for file reading, parsing, routing analysis, documentation generation, and finalization
 - scene overview for channels, buses, DCAs, and output patches
+- searchable production sheet with match highlighting and helpful empty states
 - signal-tracing and topology-oriented modeling through the scene graph/domain model
-- production-sheet style export workflows
+- professional exports to Markdown, HTML, JSON, plain text, CSV, and browser print/PDF
 - routing maps and readable summaries for handoff
 - conservative parser bucket summaries for unsupported or partially parsed constructs
 - volunteer onboarding and engineer handoff friendly presentation
@@ -105,11 +110,11 @@ See [docs/demo-workflow.md](docs/demo-workflow.md) for a step-by-step local demo
 ### Sample workflow
 
 1. open RouteView in the browser
-2. upload an X32 or M32 `.scn` file, or use the demo data
-3. inspect channel, bus, DCA, output, and routing summaries
-4. review parser bucket summaries to see what is still partially interpreted
-5. export markdown/CSV views for production sheets or handoff notes
-6. print or save the exported documentation as PDF from the browser if needed
+2. drag in an X32 or M32 `.scn` file, browse for one, paste scene text, or use demo data
+3. watch the upload and parsing status until the documentation is generated
+4. search channel, bus, output, route, DCA, and signal-trace content in the production sheet
+5. inspect channel, bus, DCA, output, routing, warnings, and parser bucket summaries
+6. export Markdown, HTML, JSON, plain text, CSV, or print/save as PDF
 
 ## Project structure
 
