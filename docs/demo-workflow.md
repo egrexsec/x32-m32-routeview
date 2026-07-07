@@ -29,13 +29,16 @@ There is currently **no committed standalone sample `.scn` fixture** in the repo
 
 From the **Upload Scene File** panel you can:
 - drag and drop a `.scn` file
-- click **Choose File**
+- click **Choose File** or **Replace File**
 - paste scene text directly and click **Parse Text**
+- cancel while a file is being read
 
 Confirmed accepted flow from the current UI:
 - Behringer X32 `.scn`
 - Midas M32 `.scn`
 - pasted scene text for quick parser testing
+
+RouteView validates file type, empty files, and oversized files before parsing. During processing it reports the active stage, including reading, parsing, routing analysis, documentation generation, search-index preparation, and finalization.
 
 ## Inspect the scene
 
@@ -54,7 +57,8 @@ What you can inspect here:
 
 Helpful current controls:
 - **Hide inactive items** to reduce noise
-- **Quick find** to search channels, buses, outputs, and routes
+- **Quick find** to search channels, buses, outputs, routes, and signal traces
+- highlighted channel-name matches and clear empty states when a filter returns nothing
 
 ### 2. Export
 
@@ -63,6 +67,9 @@ Use this when you want shareable documentation.
 Current export actions:
 - **Download `.md`** for markdown documentation
 - **Copy** for quick paste into notes or tickets
+- **Download `.html`** for standalone printable documentation
+- **Download `.json`** for structured archiving or automation
+- **Download `.txt`** for simple email/service-note handoffs
 - **Download `.csv`** for spreadsheet-oriented review
 - **Open Print View** and save to PDF from the browser print dialog
 
@@ -95,7 +102,7 @@ A practical handoff flow for a church AV team or venue engineer is:
 1. load the current `.scn` file before rehearsal or Sunday service
 2. review **Production Sheet** for channel names, DCA groupings, bus roles, and mapped outputs
 3. use **Signal Traces** and **Signal Flow** to answer routing questions during troubleshooting
-4. export markdown or CSV for volunteers, guest engineers, or documentation binders
+4. export Markdown, HTML, plain text, CSV, or JSON for volunteers, guest engineers, automation, or documentation binders
 5. use **Open Print View** to save a PDF production sheet for offline handoff
 
 This is especially useful when a replacement operator needs to understand the showfile without opening X32-Edit first.
