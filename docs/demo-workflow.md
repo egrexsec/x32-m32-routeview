@@ -1,6 +1,6 @@
 # RouteView demo workflow
 
-This walkthrough matches the current app behavior in the repository and is intended to help a new user understand RouteView in a few minutes.
+This walkthrough matches the current default-branch app behavior and helps a new user understand RouteView in a few minutes.
 
 ## Start RouteView locally
 
@@ -90,7 +90,7 @@ These views are the fastest way to answer questions like:
 
 ## Church AV / venue handoff workflow
 
-A practical handoff flow for a church AV team or venue engineer is:
+A practical handoff flow for a church AV team, technical director, or venue engineer is:
 
 1. load the current `.scn` file before rehearsal or Sunday service
 2. review **Production Sheet** for channel names, DCA groupings, bus roles, and mapped outputs
@@ -102,7 +102,7 @@ This is especially useful when a replacement operator needs to understand the sh
 
 ## Screenshots
 
-The repo currently includes verified screenshots that match the docs flow:
+The repo currently includes verified screenshots that match the default-branch docs flow:
 - `docs/assets/screenshots/home.png`
 - `docs/assets/screenshots/routeview-production-sheet.png`
 
