@@ -6,11 +6,12 @@ Topology-aware documentation and visualization tool for **Behringer X32** and **
 
 ## Project summary
 
-RouteView turns mixer scene files into human-readable routing documentation. Instead of handing a volunteer, engineer, or replacement operator a raw `.scn` file and hoping they can decode it, the app parses the scene, normalizes the routing model, and presents it in a structured workspace.
+RouteView turns mixer scene files into human-readable routing documentation. Instead of handing a volunteer, guest engineer, or replacement operator a raw `.scn` file and hoping they can decode it, the app parses the scene, normalizes the routing model, and presents it in a structured workspace.
 
 ## Who it is for
 
 - church AV teams
+- technical directors
 - venue and club engineers
 - broadcast teams
 - theater and education environments
@@ -28,15 +29,17 @@ X32/M32 scene files are powerful, but they are not a friendly operating document
 
 ## Current status
 
-**Active prototype / early product.**
+**Active early-stage church technology project.**
 
-Confirmed in the repository today:
+Confirmed in the default branch today:
 - `.scn` upload and parsing for X32/M32 scene files
 - normalized scene model for channels, buses, DCAs, outputs, and routing blocks
 - conservative parser behavior that keeps unknown/unhandled lines visible
 - export helpers for markdown and CSV outputs
 - tests around parser, scene model, and topology graph behavior
 - browser UI for upload, demo data, and documentation-oriented views
+
+A documentation/export polish branch is also in progress to expand generated docs search, export formats, screenshots, and handoff workflows.
 
 ## Features
 
