@@ -57,8 +57,10 @@ What you can inspect here:
 
 Helpful current controls:
 - **Hide inactive items** to reduce noise
+- section jump links for Inputs, DCAs, Buses, Outputs, Signal Traces, and Handoff Notes
+- collapsible sections so long production sheets stay manageable
 - **Quick find** to search channels, buses, outputs, routes, and signal traces
-- highlighted channel-name matches and clear empty states when a filter returns nothing
+- highlighted matches, **Reset search**, and clear empty states when a filter returns nothing
 
 ### 2. Export
 
@@ -72,6 +74,8 @@ Current export actions:
 - **Download `.txt`** for simple email/service-note handoffs
 - **Download `.csv`** for spreadsheet-oriented review
 - **Open Print View** and save to PDF from the browser print dialog
+
+Downloaded export filenames are based on the scene name and export date, for example `sunday-service-2026-07-07-routing.md`.
 
 You can also include parser bucket summaries/examples in exports when you want engineering-oriented detail.
 
@@ -111,7 +115,9 @@ This is especially useful when a replacement operator needs to understand the sh
 
 The repo currently includes verified screenshots that match the docs flow:
 - `docs/assets/screenshots/home.png`
-- `docs/assets/screenshots/routeview-production-sheet.png`
+- `docs/assets/screenshots/upload-success.png`
+- `docs/assets/screenshots/generated-docs.png`
+- `docs/assets/screenshots/export-menu.png`
 
 ## Safety note
 

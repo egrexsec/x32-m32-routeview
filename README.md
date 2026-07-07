@@ -35,8 +35,8 @@ Confirmed in the repository today:
 - local `.scn` parsing for X32/M32 scene files; scene data is not uploaded
 - normalized scene model for channels, buses, DCAs, outputs, and routing blocks
 - conservative parser behavior that keeps unknown/unhandled lines visible
-- instant client-side search inside the generated production sheet
-- exports for Markdown, HTML, JSON, plain text, CSV, and browser print/PDF
+- instant client-side search, jump links, collapsible sections, highlights, reset, and no-results states inside the generated production sheet
+- exports for Markdown, HTML, JSON, plain text, CSV, and browser print/PDF with clean scene/date filenames
 - tests around parser, scene model, and topology graph behavior
 - browser UI for upload, demo data, documentation review, and professional handoff
 
@@ -46,9 +46,10 @@ Confirmed in the repository today:
 - drag-and-drop upload with file type and size validation
 - clear processing status for file reading, parsing, routing analysis, documentation generation, and finalization
 - scene overview for channels, buses, DCAs, and output patches
-- searchable production sheet with match highlighting and helpful empty states
+- searchable production sheet with jump links, collapsible sections, match highlighting, reset search, and helpful empty states
 - signal-tracing and topology-oriented modeling through the scene graph/domain model
 - professional exports to Markdown, HTML, JSON, plain text, CSV, and browser print/PDF
+- clean export filenames based on the scene name and export date
 - routing maps and readable summaries for handoff
 - conservative parser bucket summaries for unsupported or partially parsed constructs
 - volunteer onboarding and engineer handoff friendly presentation
@@ -68,9 +69,17 @@ The parser is intentionally conservative. Unsupported commands are summarized in
 
 ![RouteView home](docs/assets/screenshots/home.png)
 
-### Production-sheet style workspace with demo data
+### Upload success state
 
-![RouteView production sheet](docs/assets/screenshots/routeview-production-sheet.png)
+![RouteView upload success](docs/assets/screenshots/upload-success.png)
+
+### Generated documentation workspace
+
+![RouteView generated docs](docs/assets/screenshots/generated-docs.png)
+
+### Export menu
+
+![RouteView export menu](docs/assets/screenshots/export-menu.png)
 
 ## Architecture
 
@@ -112,9 +121,9 @@ See [docs/demo-workflow.md](docs/demo-workflow.md) for a step-by-step local demo
 1. open RouteView in the browser
 2. drag in an X32 or M32 `.scn` file, browse for one, paste scene text, or use demo data
 3. watch the upload and parsing status until the documentation is generated
-4. search channel, bus, output, route, DCA, and signal-trace content in the production sheet
-5. inspect channel, bus, DCA, output, routing, warnings, and parser bucket summaries
-6. export Markdown, HTML, JSON, plain text, CSV, or print/save as PDF
+4. use jump links, collapsible sections, and Quick find to search channel, bus, output, route, DCA, and signal-trace content
+5. inspect channel, bus, DCA, output, routing, warnings, handoff notes, and parser bucket summaries
+6. export Markdown, HTML, JSON, plain text, CSV, or print/save as PDF; downloaded files use the scene name plus the export date
 
 ## Project structure
 
@@ -143,6 +152,8 @@ Confirmed tests include:
 - `src/test/x32-parser.test.ts`
 - `src/test/scene-model.test.ts`
 - `src/test/topology-graph.test.ts`
+- `src/test/upload-validation.test.ts`
+- `src/test/exporters.test.ts`
 
 ## Deployment
 

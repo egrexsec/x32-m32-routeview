@@ -5,6 +5,7 @@ import {
   combinedCSV,
   defaultExportOptions,
   downloadText,
+  exportBaseName,
   parserBucketGroupLabels,
   sceneToHtml,
   sceneToJson,
@@ -27,7 +28,7 @@ export function ExportTab({ scene }: { scene: MixerScene }) {
   const html = useMemo(() => sceneToHtml(scene, exportOptions), [scene, exportOptions]);
   const json = useMemo(() => sceneToJson(scene), [scene]);
   const plainText = useMemo(() => sceneToPlainText(scene, exportOptions), [scene, exportOptions]);
-  const base = (scene.fileName ?? "scene").replace(/\.[^.]+$/, "");
+  const base = exportBaseName(scene);
 
   const updateOption = <K extends keyof ExportOptions>(key: K, value: ExportOptions[K]) => {
     setExportOptions((current) => ({ ...current, [key]: value }));

@@ -46,6 +46,17 @@ export const defaultExportOptions: ExportOptions = {
   parserBucketGroups: [...parserBucketGroupLabels],
 };
 
+export function exportBaseName(scene: MixerScene): string {
+  const sourceName = (scene.fileName ?? "scene").replace(/\.[^.]+$/, "");
+  const cleanName = sourceName
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  const date = new Date(scene.parsedAt).toISOString().slice(0, 10);
+  return `${cleanName || "scene"}-${date}`;
+}
+
 function pad(s: string | number, n: number): string {
   const str = String(s);
   return str.length >= n ? str : str + " ".repeat(n - str.length);

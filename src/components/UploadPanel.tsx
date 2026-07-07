@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { StatusBadge } from "./StatusBadge";
 import type { MixerScene } from "@/types/routing";
+import { formatBytes, MAX_SCENE_BYTES, validateSceneFile } from "@/lib/uploadValidation";
 
 interface Props {
   scene: MixerScene | null;
@@ -13,8 +14,6 @@ interface Props {
   onClear: () => void;
 }
 
-const MAX_SCENE_BYTES = 10 * 1024 * 1024;
-const ACCEPTED_EXTENSIONS = [".scn", ".txt"];
 const STAGES = [
   "Reading file",
   "Parsing scene",
@@ -32,25 +31,6 @@ type UploadState =
   | { kind: "success"; message: string }
   | { kind: "error"; message: string };
 
-function formatBytes(n?: number) {
-  if (!n && n !== 0) return "-";
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  return `${(n / 1024 / 1024).toFixed(2)} MB`;
-}
-
-function validateFile(file: File): string | null {
-  const extension = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
-  if (!ACCEPTED_EXTENSIONS.includes(extension)) {
-    return "Choose an X32/M32 .scn file. Plain-text scene exports are also accepted.";
-  }
-  if (file.size === 0) return "That file is empty. Export the scene from your console or X32-Edit, then try again.";
-  if (file.size > MAX_SCENE_BYTES) {
-    return `Scene files must be ${formatBytes(MAX_SCENE_BYTES)} or smaller. This file is ${formatBytes(file.size)}.`;
-  }
-  return null;
-}
-
 export function UploadPanel({ scene, onParseText, onLoadDemo, onClear }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const readerRef = useRef<FileReader | null>(null);
@@ -60,7 +40,7 @@ export function UploadPanel({ scene, onParseText, onLoadDemo, onClear }: Props) 
 
   const handleFile = useCallback(
     (file: File) => {
-      const validationError = validateFile(file);
+      const validationError = validateSceneFile(file);
       if (validationError) {
         setUploadState({ kind: "error", message: validationError });
         toast.error("Scene file not accepted");
@@ -142,7 +122,7 @@ export function UploadPanel({ scene, onParseText, onLoadDemo, onClear }: Props) 
             Drag in a Behringer X32 or Midas M32 <code className="font-mono">.scn</code> file, or paste scene text below.
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Processed locally in your browser. Accepted: .scn or plain-text scene exports up to {formatBytes(MAX_SCENE_BYTES)}.
+            Processed locally in your browser. File upload accepts .scn scene files up to {formatBytes(MAX_SCENE_BYTES)}.
           </p>
         </div>
         <div className="flex gap-2 no-print">
@@ -201,7 +181,7 @@ export function UploadPanel({ scene, onParseText, onLoadDemo, onClear }: Props) 
           <input
             ref={inputRef}
             type="file"
-            accept=".scn,.txt,text/plain"
+            accept=".scn"
             className="hidden"
             onChange={(event) => {
               const file = event.target.files?.[0];

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import type { InputChannel, MixerScene } from "@/types/routing";
 import {
   buildDerivedSceneModel,
@@ -20,6 +20,15 @@ const COLOR_MAP: Record<string, ColorMeta> = {
   WH: { label: "WHITE", className: "scribble-wh" },
   OFF: { label: "-", className: "scribble-off" },
 };
+
+const DOC_SECTIONS = [
+  { id: "inputs", label: "Inputs" },
+  { id: "dcas", label: "DCAs" },
+  { id: "buses", label: "Buses" },
+  { id: "outputs", label: "Outputs" },
+  { id: "traces", label: "Signal Traces" },
+  { id: "handoff", label: "Handoff Notes" },
+];
 
 function colorMeta(color?: string): ColorMeta {
   return COLOR_MAP[(color ?? "OFF").toUpperCase()] ?? COLOR_MAP.OFF;
@@ -72,13 +81,14 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
   const derived = useMemo(() => buildDerivedSceneModel(scene), [scene]);
   const dcas = useMemo(() => dcaAssignments(scene), [scene]);
 
-  const inputChannels = useMemo(() => {
-    const mainInputs = (hideInactive ? derived.activeInputs : derived.inputs)
-      .map((item) => item.channel)
-      .filter((channel) => channel.number >= 1 && channel.number <= 32)
-      .filter((channel) => !query.trim() || matchesQuery(`CH ${channelNumber(channel.number)} ${channelDisplayName(channel)} ${channel.source ?? ""}`, query));
-    return mainInputs;
-  }, [derived.activeInputs, derived.inputs, hideInactive, query]);
+  const inputChannels = useMemo(
+    () =>
+      (hideInactive ? derived.activeInputs : derived.inputs)
+        .map((item) => item.channel)
+        .filter((channel) => channel.number >= 1 && channel.number <= 32)
+        .filter((channel) => !query.trim() || matchesQuery(`CH ${channelNumber(channel.number)} ${channelDisplayName(channel)} ${channel.source ?? ""}`, query)),
+    [derived.activeInputs, derived.inputs, hideInactive, query],
+  );
 
   const visibleBuses = useMemo(
     () =>
@@ -89,14 +99,34 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
   );
 
   const visibleOutputBanks = useMemo(
-    () => (hideInactive ? derived.activeOutputBanks : derived.outputBanks),
-    [derived.activeOutputBanks, derived.outputBanks, hideInactive],
+    () =>
+      (hideInactive ? derived.activeOutputBanks : derived.outputBanks)
+        .map((bank) => ({
+          ...bank,
+          outputs: bank.outputs.filter(
+            (output) => !query.trim() || matchesQuery(`${bank.title} ${output.number} ${output.source} ${output.notes ?? ""}`, query),
+          ),
+        }))
+        .filter((bank) => !query.trim() || bank.outputs.length > 0),
+    [derived.activeOutputBanks, derived.outputBanks, hideInactive, query],
+  );
+
+  const visibleRoutingBlocks = useMemo(
+    () => derived.routingBlocks.filter((block) => !query.trim() || matchesQuery(`${block.blockName} ${block.assignments.join(" ")}`, query)),
+    [derived.routingBlocks, query],
   );
 
   const visibleTraces = useMemo(
     () => derived.signalTraces.filter((trace) => traceMatches(trace, query)).slice(0, 80),
     [derived.signalTraces, query],
   );
+
+  const visibleResultCount =
+    inputChannels.length +
+    visibleBuses.length +
+    visibleOutputBanks.reduce((sum, bank) => sum + bank.outputs.length, 0) +
+    visibleRoutingBlocks.length +
+    visibleTraces.length;
 
   return (
     <div className={printMode ? "production-sheet production-sheet-print" : "production-sheet space-y-8"}>
@@ -112,23 +142,44 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
       </header>
 
       {!printMode ? (
-        <div className="no-print prod-toolbar">
-          <label className="flex cursor-pointer items-center gap-2">
-            <input type="checkbox" checked={hideInactive} onChange={(event) => setHideInactive(event.target.checked)} />
-            <span>Hide inactive items</span>
-          </label>
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Quick find: channel, bus, output, route..."
-            className="min-w-[260px] flex-1 rounded-md border bg-background px-3 py-2 text-sm"
-          />
-          <span>{inputChannels.length} input / {visibleBuses.length} bus / {visibleOutputBanks.length} output bank</span>
+        <>
+          <div className="no-print prod-toolbar">
+            <label className="flex cursor-pointer items-center gap-2">
+              <input type="checkbox" checked={hideInactive} onChange={(event) => setHideInactive(event.target.checked)} />
+              <span>Hide inactive items</span>
+            </label>
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Quick find: channel, bus, output, route..."
+              aria-label="Search generated documentation"
+              className="min-w-[260px] flex-1 rounded-md border bg-background px-3 py-2 text-sm"
+            />
+            {query ? (
+              <button type="button" className="rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted" onClick={() => setQuery("")}>
+                Reset search
+              </button>
+            ) : null}
+            <span>{inputChannels.length} input / {visibleBuses.length} bus / {visibleOutputBanks.length} output bank</span>
+          </div>
+
+          <nav className="no-print prod-section-nav" aria-label="Documentation sections">
+            {DOC_SECTIONS.map((section) => (
+              <a key={section.id} href={`#${section.id}`}>
+                {section.label}
+              </a>
+            ))}
+          </nav>
+        </>
+      ) : null}
+
+      {query && visibleResultCount === 0 ? (
+        <div className="prod-empty rounded-lg border">
+          No results found for "{query}". Try a channel name, bus number, output label, DCA name, route block, or warning text.
         </div>
       ) : null}
 
-      <section className="prod-section">
-        <div className="prod-section-title"><div><span className="prod-section-index">01</span><h2>Input Channels</h2></div><span>CH 01–32</span></div>
+      <DocSection id="inputs" index="01" title="Input Channels" meta="CH 01-32">
         <div className="prod-table-wrap">
           <table className="prod-table prod-input-table">
             <thead><tr><th>Ch</th><th>Label / Name</th><th>Color</th><th>DCA Assignment</th><th>Preamp / Pad</th><th>Notes</th></tr></thead>
@@ -150,10 +201,9 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
           </table>
           {!inputChannels.length ? <p className="prod-empty">No input channels found. Try clearing search or showing inactive items.</p> : null}
         </div>
-      </section>
+      </DocSection>
 
-      <section className="prod-section">
-        <div className="prod-section-title"><div><span className="prod-section-index">02</span><h2>DCA Groups</h2></div><span>DCA 1–8</span></div>
+      <DocSection id="dcas" index="02" title="DCA Groups" meta="DCA 1-8">
         <div className="dca-grid dca-fader-grid">
           {dcas.map((dca) => {
             const assigned = hideInactive ? dca.assigned.filter((channel) => !isDefaultOrUnusedInput(channel)) : dca.assigned;
@@ -166,10 +216,9 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
             );
           })}
         </div>
-      </section>
+      </DocSection>
 
-      <section className="prod-section">
-        <div className="prod-section-title"><div><span className="prod-section-index">03</span><h2>Mix Buses & Channel Sends</h2></div><span>Bus 01–16</span></div>
+      <DocSection id="buses" index="03" title="Mix Buses & Channel Sends" meta="Bus 01-16">
         <div className="bus-grid">
           {visibleBuses.map(({ bus, sendingInputs, mappedOutputs }) => (
             <div key={bus.number} className="bus-card">
@@ -186,23 +235,47 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
             </div>
           ))}
         </div>
-      </section>
+      </DocSection>
 
-      <section className="prod-section">
-        <div className="prod-section-title"><div><span className="prod-section-index">04</span><h2>Outputs & Routing Blocks</h2></div><span>Physical / Digital Routing</span></div>
+      <DocSection id="outputs" index="04" title="Outputs & Routing Blocks" meta="Physical / Digital Routing">
         <div className="patch-grid">
           {visibleOutputBanks.map((bank) => <OutputBankCard key={bank.title} bank={bank} />)}
-          {derived.routingBlocks.map((block) => <PatchBlock key={block.blockName} title={`${block.blockName} Routing Block`} values={block.assignments} />)}
+          {visibleRoutingBlocks.map((block) => <PatchBlock key={block.blockName} title={`${block.blockName} Routing Block`} values={block.assignments} />)}
+          {!visibleOutputBanks.length && !visibleRoutingBlocks.length ? <p className="prod-muted">No outputs or routing blocks matched the current filter.</p> : null}
         </div>
-      </section>
+      </DocSection>
 
-      <section className="prod-section">
-        <div className="prod-section-title"><div><span className="prod-section-index">05</span><h2>Signal Traces</h2></div><span>Derived from active sends and outputs</span></div>
+      <DocSection id="traces" index="05" title="Signal Traces" meta="Derived from active sends and outputs">
         <div className="trace-grid">
           {visibleTraces.length ? visibleTraces.map((trace) => <TraceCard key={trace.id} trace={trace} />) : <p className="prod-muted">No signal traces matched the current filter.</p>}
         </div>
-      </section>
+      </DocSection>
+
+      <DocSection id="handoff" index="06" title="Handoff Notes" meta="For volunteers and guest engineers">
+        <div className="handoff-grid">
+          <div className="patch-card">
+            <h3>Before service</h3>
+            <p className="prod-muted">Confirm the scene file name, input labels, DCA groups, monitor buses, and output patches match the current room setup.</p>
+          </div>
+          <div className="patch-card">
+            <h3>Troubleshooting</h3>
+            <p className="prod-muted">Use Quick find to locate a channel, bus, output, DCA, or route block. Check warnings and uncategorized parser lines before relying on unsupported scene details.</p>
+          </div>
+        </div>
+      </DocSection>
     </div>
+  );
+}
+
+function DocSection({ id, index, title, meta, children }: { id: string; index: string; title: string; meta: string; children: ReactNode }) {
+  return (
+    <details id={id} className="prod-section" open>
+      <summary className="prod-section-title">
+        <div><span className="prod-section-index">{index}</span><h2>{title}</h2></div>
+        <span>{meta}</span>
+      </summary>
+      {children}
+    </details>
   );
 }
 
