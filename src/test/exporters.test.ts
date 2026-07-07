@@ -16,9 +16,10 @@ describe("scene exporters", () => {
   it("exports markdown documentation", () => {
     const markdown = sceneToMarkdown(scene);
 
-    expect(markdown).toContain("# X32 / M32 RouteView");
+    expect(markdown).toContain("# Sunday Service.scn Volunteer Console Guide");
     expect(markdown).toContain("Sunday Service.scn");
-    expect(markdown).toContain("## 1. Input Channels");
+    expect(markdown).toContain("## Input Channels");
+    expect(markdown).toContain("## Volunteer Notes");
   });
 
   it("exports standalone html documentation", () => {
@@ -48,7 +49,7 @@ describe("scene exporters", () => {
   it("exports plain text without markdown table pipes", () => {
     const plainText = sceneToPlainText(scene);
 
-    expect(plainText).toContain("X32 / M32 RouteView");
+    expect(plainText).toContain("Volunteer Console Guide");
     expect(plainText).not.toContain("|");
   });
 });

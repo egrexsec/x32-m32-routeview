@@ -14,7 +14,7 @@ import {
   type ExportOptions,
   type ParserBucketGroup,
 } from "@/lib/exporters";
-import { Copy, Download, Printer, FileText, FileSpreadsheet, Settings2, Braces, Code2 } from "lucide-react";
+import { Braces, Code2, Copy, Download, FileSpreadsheet, FileText, Printer, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 
 export function ExportTab({ scene }: { scene: MixerScene }) {
@@ -45,161 +45,122 @@ export function ExportTab({ scene }: { scene: MixerScene }) {
 
   const selectedBuckets = new Set(exportOptions.parserBucketGroups ?? []);
 
+  const copyMarkdown = async () => {
+    await navigator.clipboard.writeText(md);
+    setCopied(true);
+    toast.success("Volunteer guide copied");
+    setTimeout(() => setCopied(false), 1500);
+  };
+
   return (
-    <div className="grid gap-4 lg:grid-cols-[1fr_1.2fr]">
-      <div className="space-y-4">
-        <ExportCard
-          title="Markdown"
-          description="Sectioned documentation for run-of-show docs, volunteer handoffs, and repo-friendly notes."
-          icon={FileText}
-        >
-          <div className="flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              onClick={() => {
-                downloadText(`${base}-routing.md`, md, "text/markdown");
-                toast.success("Markdown downloaded");
-              }}
-            >
-              <Download className="mr-1.5 h-4 w-4" /> Download .md
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={async () => {
-                await navigator.clipboard.writeText(md);
-                setCopied(true);
-                toast.success("Markdown copied");
-                setTimeout(() => setCopied(false), 1500);
-              }}
-            >
-              <Copy className="mr-1.5 h-4 w-4" /> {copied ? "Copied!" : "Copy"}
-            </Button>
-          </div>
-        </ExportCard>
-
-        <ExportCard
-          title="HTML"
-          description="Standalone, printable HTML that preserves tables and scene structure."
-          icon={Code2}
-        >
-          <Button
-            size="sm"
-            onClick={() => {
-              downloadText(`${base}-routing.html`, html, "text/html");
-              toast.success("HTML downloaded");
-            }}
-          >
-            <Download className="mr-1.5 h-4 w-4" /> Download .html
-          </Button>
-        </ExportCard>
-
-        <ExportCard
-          title="JSON"
-          description="Structured export for archiving, automation, and future RouteView imports."
-          icon={Braces}
-        >
-          <Button
-            size="sm"
-            onClick={() => {
-              downloadText(`${base}-routing.json`, json, "application/json");
-              toast.success("JSON downloaded");
-            }}
-          >
-            <Download className="mr-1.5 h-4 w-4" /> Download .json
-          </Button>
-        </ExportCard>
-
-        <ExportCard
-          title="Plain Text"
-          description="Readable text for email, service notes, and systems that do not handle Markdown."
-          icon={FileText}
-        >
-          <Button
-            size="sm"
-            onClick={() => {
-              downloadText(`${base}-routing.txt`, plainText, "text/plain");
-              toast.success("Plain text downloaded");
-            }}
-          >
-            <Download className="mr-1.5 h-4 w-4" /> Download .txt
-          </Button>
-        </ExportCard>
-
-        <ExportCard
-          title="CSV"
-          description="Single CSV containing routing data plus selected Parser Bucket sections. Opens in Excel, Google Sheets, or Numbers."
-          icon={FileSpreadsheet}
-        >
-          <Button
-            size="sm"
-            onClick={() => {
-              downloadText(`${base}-routing.csv`, combinedCSV(scene, exportOptions), "text/csv");
-              toast.success("CSV downloaded");
-            }}
-          >
-            <Download className="mr-1.5 h-4 w-4" /> Download .csv
-          </Button>
-        </ExportCard>
-
-        <ExportCard
-          title="Print / Save as PDF"
-          description="Open a professionally formatted document. Use your browser's print dialog and choose 'Save as PDF'."
-          icon={Printer}
-        >
-          <Button size="sm" variant="default" onClick={() => window.print()}>
-            <Printer className="mr-1.5 h-4 w-4" /> Open Print View
-          </Button>
-        </ExportCard>
-
-        <ExportCard
-          title="Parser Bucket Export Selectors"
-          description="Optionally include Parser Bucket summaries or examples in Markdown and CSV exports. Core routing exports still work like before."
-          icon={Settings2}
-        >
-          <div className="space-y-4">
-            <div className="grid gap-2 sm:grid-cols-2">
-              <CheckRow
-                label="Parser Bucket Summary"
-                checked={!!exportOptions.includeUnrecognizedSummary}
-                onChange={(checked) => updateOption("includeUnrecognizedSummary", checked)}
-              />
-              <CheckRow
-                label="Parser Bucket Examples"
-                checked={!!exportOptions.includeUnrecognizedExamples}
-                onChange={(checked) => updateOption("includeUnrecognizedExamples", checked)}
-              />
-              <CheckRow
-                label="Raw Debug Lines"
-                checked={!!exportOptions.includeRawUnrecognized}
-                onChange={(checked) => updateOption("includeRawUnrecognized", checked)}
-              />
-            </div>
-
-            <div className="border-t pt-3">
-              <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Parser Bucket Tabs to Include
-              </div>
-              <div className="grid gap-2">
-                {parserBucketGroupLabels.map((bucket) => (
-                  <CheckRow
-                    key={bucket}
-                    label={bucket}
-                    checked={selectedBuckets.has(bucket)}
-                    onChange={() => toggleBucketGroup(bucket)}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        </ExportCard>
-      </div>
-
-      <div className="panel overflow-hidden">
-        <div className="border-b bg-muted/60 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Markdown Preview
+    <div className="export-workspace">
+      <section className="primary-export-card">
+        <div>
+          <p className="prod-kicker">Export Documentation</p>
+          <h2>Volunteer guide is ready</h2>
+          <p>
+            Markdown is the best default for church teams because it works in Planning Center notes, shared drives,
+            GitHub, email, and most documentation tools.
+          </p>
         </div>
-        <pre className="max-h-[520px] overflow-auto p-4 font-mono text-xs leading-relaxed">{md}</pre>
+        <div className="primary-export-actions">
+          <Button
+            size="lg"
+            onClick={() => {
+              downloadText(`${base}-volunteer-guide.md`, md, "text/markdown");
+              toast.success("Volunteer guide downloaded");
+            }}
+          >
+            <Download className="mr-1.5 h-4 w-4" /> Export Volunteer Guide
+          </Button>
+          <Button size="lg" variant="secondary" onClick={copyMarkdown}>
+            <Copy className="mr-1.5 h-4 w-4" /> {copied ? "Copied" : "Copy Markdown"}
+          </Button>
+        </div>
+      </section>
+
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+        <div className="space-y-4">
+          <details className="panel p-4" open>
+            <summary className="cursor-pointer text-sm font-semibold">More Export Options</summary>
+            <div className="mt-4 grid gap-3">
+              <ExportButton
+                title="HTML"
+                description="Standalone printable page for teams that want a single file."
+                icon={Code2}
+                onClick={() => {
+                  downloadText(`${base}-volunteer-guide.html`, html, "text/html");
+                  toast.success("HTML downloaded");
+                }}
+              />
+              <ExportButton
+                title="Plain Text"
+                description="Simple text for email, service notes, or older systems."
+                icon={FileText}
+                onClick={() => {
+                  downloadText(`${base}-volunteer-guide.txt`, plainText, "text/plain");
+                  toast.success("Plain text downloaded");
+                }}
+              />
+              <ExportButton
+                title="CSV"
+                description="Spreadsheet-friendly routing data with selected advanced sections."
+                icon={FileSpreadsheet}
+                onClick={() => {
+                  downloadText(`${base}-routing.csv`, combinedCSV(scene, exportOptions), "text/csv");
+                  toast.success("CSV downloaded");
+                }}
+              />
+              <ExportButton
+                title="JSON"
+                description="Structured archive for automation or future RouteView import work."
+                icon={Braces}
+                onClick={() => {
+                  downloadText(`${base}-routing.json`, json, "application/json");
+                  toast.success("JSON downloaded");
+                }}
+              />
+              <ExportButton
+                title="Print / Save as PDF"
+                description="Open the browser print dialog and choose Save as PDF."
+                icon={Printer}
+                onClick={() => window.print()}
+              />
+            </div>
+          </details>
+
+          <details className="panel p-4">
+            <summary className="cursor-pointer text-sm font-semibold">Advanced Console Details</summary>
+            <div className="mt-4 space-y-4">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <CheckRow label="Console Settings" checked={!!exportOptions.includeSettings} onChange={(checked) => updateOption("includeSettings", checked)} />
+                <CheckRow label="Channel Processing" checked={!!exportOptions.includeChannelProcessing} onChange={(checked) => updateOption("includeChannelProcessing", checked)} />
+                <CheckRow label="Channel Sends" checked={!!exportOptions.includeChannelSends} onChange={(checked) => updateOption("includeChannelSends", checked)} />
+                <CheckRow label="Parser Bucket Summary" checked={!!exportOptions.includeUnrecognizedSummary} onChange={(checked) => updateOption("includeUnrecognizedSummary", checked)} />
+                <CheckRow label="Parser Bucket Examples" checked={!!exportOptions.includeUnrecognizedExamples} onChange={(checked) => updateOption("includeUnrecognizedExamples", checked)} />
+                <CheckRow label="Raw Debug Lines" checked={!!exportOptions.includeRawUnrecognized} onChange={(checked) => updateOption("includeRawUnrecognized", checked)} />
+              </div>
+
+              <div className="border-t pt-3">
+                <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <Settings2 className="h-3.5 w-3.5" /> Parser Bucket Tabs to Include
+                </div>
+                <div className="grid gap-2">
+                  {parserBucketGroupLabels.map((bucket) => (
+                    <CheckRow key={bucket} label={bucket} checked={selectedBuckets.has(bucket)} onChange={() => toggleBucketGroup(bucket)} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <div className="panel overflow-hidden">
+          <div className="border-b bg-muted/60 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Markdown Preview
+          </div>
+          <pre className="max-h-[620px] overflow-auto p-4 font-mono text-xs leading-relaxed">{md}</pre>
+        </div>
       </div>
     </div>
   );
@@ -214,27 +175,28 @@ function CheckRow({ label, checked, onChange }: { label: string; checked: boolea
   );
 }
 
-function ExportCard({
+function ExportButton({
   title,
   description,
   icon: Icon,
-  children,
+  onClick,
 }: {
   title: string;
   description: string;
   icon: typeof Download;
-  children: React.ReactNode;
+  onClick: () => void;
 }) {
   return (
-    <div className="panel p-4">
-      <div className="mb-2 flex items-center gap-2">
-        <span className="rounded-md bg-primary/10 p-1.5 text-primary">
-          <Icon className="h-4 w-4" />
-        </span>
-        <h4 className="text-sm font-semibold">{title}</h4>
-      </div>
-      <p className="mb-3 text-xs text-muted-foreground">{description}</p>
-      {children}
-    </div>
+    <button type="button" onClick={onClick} className="export-option-button">
+      <span className="rounded-md bg-primary/10 p-1.5 text-primary">
+        <Icon className="h-4 w-4" />
+      </span>
+      <span>
+        <strong>{title}</strong>
+        <small>{description}</small>
+      </span>
+      <Download className="ml-auto h-4 w-4 text-muted-foreground" />
+    </button>
   );
 }
+
