@@ -18,6 +18,10 @@ describe("scene exporters", () => {
 
     expect(markdown).toContain("# Sunday Service.scn Volunteer Console Guide");
     expect(markdown).toContain("Sunday Service.scn");
+    expect(markdown).toContain("## Professional Condensed Routing Chart");
+    expect(markdown).toContain("### Inputs and Sends");
+    expect(markdown).toContain("### Buses");
+    expect(markdown).toContain("### DCAs");
     expect(markdown).toContain("## Input Channels");
     expect(markdown).toContain("## Volunteer Notes");
   });
@@ -27,6 +31,7 @@ describe("scene exporters", () => {
 
     expect(html).toContain("<!doctype html>");
     expect(html).toContain("X32 / M32 RouteView Documentation");
+    expect(html).toContain("Professional Condensed Routing Chart");
     expect(html).toContain("Sunday Service.scn");
   });
 

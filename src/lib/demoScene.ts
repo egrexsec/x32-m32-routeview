@@ -84,6 +84,7 @@ export const demoScene: MixerScene = {
     { blockName: "OUT", assignments: ["MAIN", "AUX1-6", "MTX1-6"] },
     { blockName: "AES50A", assignments: ["S16-1", "S16-2"] },
   ],
+  unrecognizedCategories: [],
   warnings: [],
   unrecognizedLines: [],
 };
