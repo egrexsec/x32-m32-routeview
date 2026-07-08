@@ -15,7 +15,7 @@ import { parseSceneText } from "@/parsers/x32M32Parser";
 import { demoScene } from "@/lib/demoScene";
 import type { MixerScene } from "@/types/routing";
 import { Button } from "@/components/ui/button";
-import { Activity, ArrowUp, CheckCircle2, Download, FileText, FileUp, Share2, Sparkles } from "lucide-react";
+import { ArrowDown, ArrowUp, CheckCircle2, Download, FileText, FileUp, Share2, Sparkles } from "lucide-react";
 import { buildVolunteerGuide } from "@/lib/volunteerGuide";
 
 const Index = () => {
@@ -44,28 +44,23 @@ const Index = () => {
     <main className="min-h-screen bg-background">
       <header className="hero-bg relative overflow-hidden text-white no-print">
         <div className="console-grid absolute inset-0 opacity-[0.08]" aria-hidden />
-        <div className="container relative py-12 md:py-16">
-          <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-primary/90">
-            <Activity className="h-4 w-4" /> X32 / M32 Scene Documentation
-          </div>
-          <h1 className="mt-3 text-4xl font-bold tracking-tight md:text-5xl">
-            X32/M32 <span className="text-primary">RouteView</span>
+        <div className="container relative py-10 md:py-14">
+          <p className="prod-kicker text-primary/90">X32 / M32 RouteView</p>
+          <h1 className="mt-3 max-w-4xl text-3xl font-bold tracking-tight md:text-5xl">
+            Turn an X32/M32 scene file into a volunteer-friendly sound board guide.
           </h1>
-          <p className="mt-3 max-w-2xl text-base text-white/75 md:text-lg">
-            Upload a console scene file and generate clean routing documentation in seconds.
+          <p className="mt-4 max-w-2xl text-base text-white/75 md:text-lg">
+            Upload your <code className="font-mono">.scn</code> file, review the generated guide, then export it for your church media team.
           </p>
+          <WorkflowMap activeStep={scene ? 3 : 1} tone="dark" />
           <div className="mt-6 flex flex-wrap gap-3">
             <Button size="lg" onClick={() => document.getElementById("upload")?.scrollIntoView({ behavior: "smooth" })}>
-              <FileUp className="mr-1.5 h-4 w-4" /> Upload .scn File
+              <FileUp className="mr-1.5 h-4 w-4" /> Upload Your .scn File
             </Button>
             <Button size="lg" variant="secondary" onClick={loadDemo}>
-              <Sparkles className="mr-1.5 h-4 w-4" /> Try Demo Data
+              <Sparkles className="mr-1.5 h-4 w-4" /> Preview With Demo
             </Button>
           </div>
-          <p className="mt-6 max-w-2xl text-sm text-white/60">
-            Built for engineers, church production teams, and volunteers who need clear documentation from X32/M32 scene
-            files without opening the console software.
-          </p>
         </div>
       </header>
 
@@ -80,11 +75,12 @@ const Index = () => {
               <section className="panel p-4 md:p-6">
                 <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
                   <div>
-                    <p className="prod-kicker">Review Documentation</p>
+                    <p className="prod-kicker">You are here: Review Volunteer Guide</p>
                     <h2 className="text-2xl font-bold tracking-tight">Volunteer guide</h2>
+                    <p className="mt-1 text-sm text-muted-foreground">Next: export and share this guide with your team.</p>
                   </div>
-                  <Button onClick={() => document.getElementById("export-documentation")?.scrollIntoView({ behavior: "smooth" })}>
-                    <Download className="mr-1.5 h-4 w-4" /> Export Documentation
+                  <Button size="lg" onClick={() => document.getElementById("export-documentation")?.scrollIntoView({ behavior: "smooth" })}>
+                    <Download className="mr-1.5 h-4 w-4" /> Export Volunteer Guide
                   </Button>
                 </div>
                 <ProductionSheet scene={scene} />
@@ -138,22 +134,27 @@ function DocumentationReadyPanel({ scene }: { scene: MixerScene }) {
       <div className="ready-panel-main">
         <span className="ready-icon"><CheckCircle2 className="h-5 w-5" /></span>
         <div>
-          <p className="prod-kicker">Documentation Ready</p>
-          <h2>{guide.sceneName}</h2>
-          <p>Review the volunteer guide, export Markdown, and share it with the audio team.</p>
+          <p className="prod-kicker">Scene Analyzed Successfully</p>
+          <h2>Your volunteer guide is ready.</h2>
+          <p>You are here: Review Volunteer Guide. Next: Export and Share.</p>
         </div>
       </div>
       <div className="ready-metrics">
         <ReadyMetric label="Console" value={scene.mixerType} />
         <ReadyMetric label="Inputs" value={`${guide.counts.activeInputs}/${guide.counts.inputs}`} />
-        <ReadyMetric label="Outputs" value={`${guide.counts.outputs}`} />
-        <ReadyMetric label="Buses" value={`${guide.counts.monitorMixes}`} />
-        <ReadyMetric label="DCAs" value={`${guide.counts.dcas}`} />
+        <ReadyMetric label="Monitor Mixes" value={`${guide.counts.monitorMixes}`} />
+        <ReadyMetric label="Main Outputs" value={`${guide.counts.outputs}`} />
+        <ReadyMetric label="Group Controls" value={`${guide.counts.dcas}`} />
         <ReadyMetric label="FX" value={`${guide.counts.effects}`} />
       </div>
-      <Button size="lg" onClick={() => document.getElementById("export-documentation")?.scrollIntoView({ behavior: "smooth" })}>
-        <Download className="mr-1.5 h-4 w-4" /> Export Documentation
-      </Button>
+      <div className="ready-actions">
+        <Button size="lg" onClick={() => document.getElementById("export-documentation")?.scrollIntoView({ behavior: "smooth" })}>
+          <Download className="mr-1.5 h-4 w-4" /> Export Volunteer Guide
+        </Button>
+        <button type="button" onClick={() => document.getElementById("documentation")?.scrollIntoView({ behavior: "smooth" })}>
+          Review guide below before exporting
+        </button>
+      </div>
     </section>
   );
 }
@@ -173,12 +174,12 @@ function AdvancedTools({ scene }: { scene: MixerScene }) {
       <div className="mb-4 rounded-lg border bg-muted/20 p-2 no-print">
         <TabsList className="flex h-auto flex-wrap justify-start">
           <TabsTrigger value="inputs">Inputs</TabsTrigger>
-          <TabsTrigger value="buses">Buses</TabsTrigger>
-          <TabsTrigger value="dcas">DCAs</TabsTrigger>
+          <TabsTrigger value="buses">Monitor Mixes</TabsTrigger>
+          <TabsTrigger value="dcas">Group Controls</TabsTrigger>
           <TabsTrigger value="outputs">Outputs</TabsTrigger>
           <TabsTrigger value="signal">Signal Flow</TabsTrigger>
           <TabsTrigger value="graph">Signal Graph</TabsTrigger>
-          <TabsTrigger value="engineering">Engineering Data</TabsTrigger>
+          <TabsTrigger value="engineering">Items RouteView Could Not Explain</TabsTrigger>
         </TabsList>
       </div>
       <TabsContent value="inputs"><InputsTab scene={scene} /></TabsContent>
@@ -199,17 +200,32 @@ function EmptyHint() {
         <div className="mx-auto w-fit rounded-full bg-primary/10 p-3 text-primary">
           <FileUp className="h-6 w-6" />
         </div>
-        <h3 className="mt-3 text-lg font-semibold">Create a volunteer-ready console guide</h3>
+        <h3 className="mt-3 text-lg font-semibold">Step 1: Upload your .scn file</h3>
         <p className="mt-1 text-sm text-muted-foreground">
-          Upload an X32 or M32 scene file, review the documentation RouteView builds, then export it for your team.
+          RouteView analyzes the file in your browser and builds a guide your volunteers can review and share.
         </p>
       </div>
       <div className="workflow-steps mt-8">
-        <WorkflowStep icon={FileUp} title="Upload Scene" text="Choose a .scn file or paste scene text." />
-        <WorkflowStep icon={FileText} title="Review Docs" text="Read inputs, monitors, outputs, DCAs, effects, and tips." />
-        <WorkflowStep icon={Share2} title="Export & Share" text="Download the Markdown guide for your team." />
+        <WorkflowStep icon={FileUp} title="Step 1: Upload your .scn file" text="Drop your X32/M32 scene file into the upload box." />
+        <WorkflowStep icon={FileText} title="Step 2: Review the generated guide" text="Check the summary, quick reference, monitor mixes, and team notes." />
+        <WorkflowStep icon={Share2} title="Step 3: Export it for your team" text="Download Markdown, print to PDF, or share a copy with volunteers." />
       </div>
     </div>
+  );
+}
+
+function WorkflowMap({ activeStep, tone = "light" }: { activeStep: number; tone?: "light" | "dark" }) {
+  const steps = ["Upload Scene File", "RouteView Analyzes It", "Review Volunteer Guide", "Export and Share"];
+  return (
+    <ol className={`workflow-map workflow-map-${tone}`} aria-label="RouteView workflow">
+      {steps.map((step, index) => (
+        <li key={step} className={index + 1 === activeStep ? "is-active" : index + 1 < activeStep ? "is-done" : ""}>
+          <span>{index + 1}</span>
+          <strong>{step}</strong>
+          {index < steps.length - 1 ? <ArrowDown className="workflow-arrow h-4 w-4" aria-hidden /> : null}
+        </li>
+      ))}
+    </ol>
   );
 }
 

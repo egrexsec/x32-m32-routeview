@@ -166,7 +166,7 @@ export function sceneToMarkdown(scene: MixerScene, options?: ExportOptions): str
         ["Inputs documented", `${guide.counts.activeInputs} active / ${guide.counts.inputs} parsed`],
         ["Monitor mixes", guide.counts.monitorMixes],
         ["Main outputs", guide.counts.outputs],
-        ["DCA groups", guide.counts.dcas],
+        ["Group volume controls", guide.counts.dcas],
         ["Effects found", guide.counts.effects],
         ["Generated", guide.generatedAt],
       ],
@@ -182,7 +182,7 @@ export function sceneToMarkdown(scene: MixerScene, options?: ExportOptions): str
   lines.push("This scene was parsed locally by RouteView. Use this guide as an operating handoff, not as a replacement for listening in the room.");
   if (scene.warnings.length) {
     lines.push("");
-    lines.push(`**Review before service:** ${scene.warnings.length} parser warning${scene.warnings.length === 1 ? "" : "s"} were found. Check troubleshooting and advanced details before relying on unsupported scene details.`);
+    lines.push(`**Review before service:** ${scene.warnings.length} item${scene.warnings.length === 1 ? "" : "s"} could not be fully explained. Check troubleshooting and advanced details before relying on unsupported scene details.`);
   }
   lines.push("");
 
@@ -190,7 +190,7 @@ export function sceneToMarkdown(scene: MixerScene, options?: ExportOptions): str
   if (guide.activeInputs.length) {
     lines.push(
       mdTable(
-        ["Channel", "Name", "Source", "DCA", "Volunteer Note"],
+        ["Channel", "Name", "Source", "Group Volume Control", "Volunteer Note"],
         guide.activeInputs.map((input) => [
           input.channel.number,
           input.label,
@@ -228,10 +228,10 @@ export function sceneToMarkdown(scene: MixerScene, options?: ExportOptions): str
   }
   lines.push("");
 
-  lines.push("## DCA Groups", "");
+  lines.push("## Group Volume Controls", "");
   lines.push(
     mdTable(
-      ["DCA", "Name", "Controls"],
+      ["Console Label", "Name", "Controls"],
       guide.dcaGroups.map((dca) => [dca.number, dca.name, dca.assignedInputs.length ? dca.assignedInputs.map((input) => input.label).join(", ") : "Unassigned"]),
     ),
   );
@@ -269,7 +269,10 @@ export function sceneToMarkdown(scene: MixerScene, options?: ExportOptions): str
     scene.routingBlocks.length > 0 ||
     scene.warnings.length > 0;
 
-  if (includeAdvanced) lines.push("---", "", "## Advanced Console Details", "");
+  if (includeAdvanced) {
+    lines.push("---", "", "## Advanced Console Details", "");
+    lines.push("This section is mainly for technical directors and advanced users. It may include AES50, Ultranet, patching, matrices, items RouteView could not fully explain, unknown scene lines, and raw routing details.", "");
+  }
 
   if (scene.routingBlocks.length) {
     lines.push("### Routing Blocks", "");
@@ -296,7 +299,7 @@ export function sceneToMarkdown(scene: MixerScene, options?: ExportOptions): str
   }
 
   if (opts.includeUnrecognizedSummary && parserGroups.length > 0) {
-    lines.push("### Parser Bucket Summary", "");
+    lines.push("### Items RouteView Could Not Fully Explain", "");
     for (const group of parserGroups) {
       lines.push(`#### ${group.bucket}`, "");
       lines.push(mdTable(["Category", "Count", "Description"], group.categories.map((c) => [c.category, c.count, c.description])));
@@ -305,7 +308,7 @@ export function sceneToMarkdown(scene: MixerScene, options?: ExportOptions): str
   }
 
   if (opts.includeUnrecognizedExamples && parserCategories.length > 0) {
-    lines.push("### Parser Bucket Examples", "");
+    lines.push("### Examples RouteView Could Not Fully Explain", "");
     for (const group of parserGroups) {
       lines.push(`#### ${group.bucket}`, "");
       for (const c of group.categories) {
@@ -317,7 +320,7 @@ export function sceneToMarkdown(scene: MixerScene, options?: ExportOptions): str
   }
 
   if (opts.includeRawUnrecognized && scene.unrecognizedLines.length) {
-    lines.push("### Raw Unrecognized Line Sample", "", "```txt");
+    lines.push("### Unknown Scene Line Sample", "", "```txt");
     lines.push(...scene.unrecognizedLines);
     lines.push("```", "");
   }

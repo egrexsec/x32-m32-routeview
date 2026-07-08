@@ -66,22 +66,22 @@ function hasWords(value: string | undefined, words: string[]): boolean {
 function busPurpose(bus: MixBus): string {
   const text = `${bus.name} ${bus.type ?? ""}`;
   if (hasWords(text, ["iem", "ear", "monitor", "wedge", "foldback"])) {
-    return "Personal or stage monitor mix. Changes here affect what musicians hear, not the main room mix.";
+    return "A personal or stage monitor mix. Changes here affect what musicians hear, not the main room mix.";
   }
   if (hasWords(text, ["stream", "broadcast", "online", "record", "rec"])) {
-    return "Broadcast or recording mix. Changes here can affect livestream or archive audio.";
+    return "A livestream or recording feed. Changes here can affect online audio or archive recordings.";
   }
   if (hasWords(text, ["fx", "reverb", "verb", "delay"])) {
-    return "Effects send. Changes here adjust how much signal feeds the effect.";
+    return "An effects send. Changes here adjust how much signal feeds reverb, delay, or another effect.";
   }
-  return "Auxiliary mix. Confirm its use with the technical director before making service-day changes.";
+  return "A monitor mix or extra audio feed. Confirm its use with the technical director before making service-day changes.";
 }
 
 function outputPurpose(output: OutputPatch): string {
   const text = `${output.outputType} ${output.source} ${output.notes ?? ""}`;
   if (hasWords(text, ["lr", "main", "l+r", "left", "right"])) return "Main room or primary speaker feed.";
   if (hasWords(text, ["stream", "broadcast", "record", "rec"])) return "Broadcast or recording destination.";
-  if (hasWords(text, ["matrix", "mtx", "delay", "fill", "lobby", "overflow"])) return "Distributed speaker or room feed.";
+  if (hasWords(text, ["matrix", "mtx", "delay", "fill", "lobby", "overflow"])) return "Extra output feed for another room, fill speaker, lobby, or overflow area.";
   if (hasWords(text, ["bus", "monitor", "iem", "wedge"])) return "Monitor or auxiliary output.";
   return "Physical or digital output from the console.";
 }
@@ -112,7 +112,7 @@ export function buildVolunteerGuide(scene: MixerScene): VolunteerGuide {
   const activeBuses = derived.activeBuses.filter(({ bus }) => !hasWords(`${bus.name} ${bus.type ?? ""}`, ["fx", "reverb", "verb", "delay"]));
   const monitorMixes = activeBuses.map(({ bus, mappedOutputs, sendingInputs }) => ({
     bus,
-    label: `Bus ${channelNumber(bus.number)} - ${bus.name || "Unnamed mix"}`,
+    label: `${bus.name || "Unnamed Monitor Mix"} (Bus ${channelNumber(bus.number)})`,
     purpose: busPurpose(bus),
     mappedOutputs,
     sendingInputs: sendingInputs.map(({ channel }) => inputByNumber.get(channel.number) ?? channelGuide(channel)).slice(0, 10),
@@ -131,7 +131,7 @@ export function buildVolunteerGuide(scene: MixerScene): VolunteerGuide {
     const dca = scene.dcas.find((item) => item.number === number);
     return {
       number,
-      name: dca?.name || `DCA ${number}`,
+      name: dca?.name ? `${dca.name} (DCA ${number})` : `Group Volume Control (DCA ${number})`,
       assignedInputs: (dca?.assignedChannels ?? []).map((channelNumberValue) => inputByNumber.get(channelNumberValue)).filter(Boolean) as GuideInput[],
     };
   });
@@ -151,34 +151,47 @@ export function buildVolunteerGuide(scene: MixerScene): VolunteerGuide {
   }
   const effects = Array.from(effectLabels).slice(0, 8).map((label) => ({ label, detail: effectDetail(label) }));
 
+  const mainRoom = mainOutputs.find((item) => hasWords(`${item.output.source} ${item.output.notes ?? ""}`, ["lr", "main"]));
+  const livestream = monitorMixes.find((mix) => hasWords(`${mix.bus.name} ${mix.bus.type ?? ""}`, ["stream", "broadcast", "online", "record", "rec"]));
+  const pastorMic = activeInputs.find((input) => hasWords(input.label, ["pastor", "speaker", "sermon", "lav", "lectern", "pulpit"])) ?? activeInputs[0];
+  const choirMics = activeInputs.filter((input) => hasWords(input.label, ["choir"]));
+  const drummerMix = monitorMixes.find((mix) => hasWords(mix.label, ["drum", "drummer"]));
+  const keyboardMix = monitorMixes.find((mix) => hasWords(mix.label, ["key", "keys", "piano"]));
+
   const quickReference = [
     {
-      label: "Main Room",
-      value: mainOutputs.find((item) => hasWords(`${item.output.source} ${item.output.notes ?? ""}`, ["lr", "main"]))?.label ?? "Check Main LR",
-      note: "Start here when the room has no audio.",
+      label: "Main Speakers",
+      value: mainRoom ? `${mainRoom.output.source} -> ${mainRoom.label}` : "Check Main LR",
+      note: "Start here if the room has no audio.",
     },
     {
-      label: "Monitor Mixes",
-      value: `${monitorMixes.length} active`,
-      note: "Use bus sends to adjust what musicians hear.",
+      label: "Livestream",
+      value: livestream ? livestream.label : "Not clearly labeled",
+      note: "Check this before assuming online audio matches the room.",
     },
     {
-      label: "DCA Groups",
-      value: `${dcaGroups.filter((dca) => dca.assignedInputs.length).length} assigned`,
-      note: "Use DCAs for fast group-level control.",
+      label: pastorMic ? "Pastor Mic" : "First Input",
+      value: pastorMic ? `Channel ${channelNumber(pastorMic.channel.number)} - ${pastorMic.label}` : "No active input found",
+      note: "Confirm this during line check before service.",
     },
     {
-      label: "Scene Health",
-      value: scene.warnings.length ? `${scene.warnings.length} warning${scene.warnings.length === 1 ? "" : "s"}` : "No warnings",
-      note: scene.warnings.length ? "Review warnings before sharing." : "Ready to export for the team.",
+      label: "Choir Mics",
+      value: choirMics.length ? `Channels ${choirMics.map((input) => channelNumber(input.channel.number)).join(", ")}` : "Not clearly labeled",
+      note: "Useful when a vocal group needs a quick check.",
     },
+    drummerMix
+      ? { label: "Drummer Monitor Mix", value: drummerMix.label, note: "Changes affect what the drummer hears." }
+      : { label: "Monitor Mixes", value: `${monitorMixes.length} active`, note: "Use these for what musicians hear." },
+    keyboardMix
+      ? { label: "Keyboard Monitor Mix", value: keyboardMix.label, note: "Changes affect what the keyboard player hears." }
+      : { label: "Group Volume Controls", value: `${dcaGroups.filter((dca) => dca.assignedInputs.length).length} assigned`, note: "Use these for quick group-level changes." },
   ];
 
   const volunteerTips = [
-    "Before rehearsal, confirm the scene name, main outputs, monitor mixes, and DCA groups with the person leading audio.",
-    "Use DCAs for quick group changes. Avoid changing channel gain unless the technical director asks you to.",
-    "Monitor bus changes affect the stage or ears. They usually do not change what the congregation hears.",
-    "If a channel is missing from a monitor, check the channel send to that bus before changing the main fader.",
+    "Before rehearsal, confirm the scene name, main outputs, monitor mixes, and group volume controls with the person leading audio.",
+    "Use group volume controls (DCAs) for quick group changes. Avoid changing input gain unless the technical director asks you to.",
+    "Monitor mix changes affect the stage or in-ear monitors. They usually do not change what the congregation hears.",
+    "If a channel is missing from a monitor mix, check the channel send to that mix before changing the main fader.",
     "Save or export this guide before handing off to another volunteer.",
   ];
 
@@ -190,10 +203,10 @@ export function buildVolunteerGuide(scene: MixerScene): VolunteerGuide {
   }
 
   const troubleshooting = [
-    "No sound in the room: confirm Main LR is active, check the assigned main outputs, then check the source channel mute and DCA.",
-    "A musician cannot hear something: find their monitor bus and confirm the channel has an enabled send to that bus.",
-    "A whole section is too loud or muted: check the related DCA before changing every channel.",
-    "Livestream sounds different from the room: check the broadcast bus or matrix path if one is listed.",
+    "No sound in the room: confirm Main LR is active, check the assigned main outputs, then check the source channel mute and group volume control.",
+    "A musician cannot hear something: find their monitor mix and confirm the channel is sent to that mix.",
+    "A whole section is too loud or muted: check the related group volume control before changing every channel.",
+    "Livestream sounds different from the room: check the livestream monitor mix or extra output feed if one is listed.",
   ];
 
   return {
@@ -217,4 +230,3 @@ export function buildVolunteerGuide(scene: MixerScene): VolunteerGuide {
     troubleshooting,
   };
 }
-

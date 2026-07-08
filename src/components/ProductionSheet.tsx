@@ -3,18 +3,16 @@ import type { MixerScene } from "@/types/routing";
 import { buildVolunteerGuide, type GuideInput } from "@/lib/volunteerGuide";
 import { channelNumber } from "@/lib/sceneModel";
 import { Button } from "@/components/ui/button";
-import { Copy, Download, Headphones, Layers3, Mic2, Music2, Printer, Route, Search, SlidersHorizontal } from "lucide-react";
+import { Download, Headphones, Layers3, Mic2, Music2, Route, Search, SlidersHorizontal } from "lucide-react";
 import { downloadText, exportBaseName, sceneToMarkdown } from "@/lib/exporters";
 import { toast } from "sonner";
 
 const SECTIONS = [
-  { id: "overview", label: "Overview" },
-  { id: "inputs", label: "Inputs" },
-  { id: "monitors", label: "Monitor Mixes" },
-  { id: "outputs", label: "Main Outputs" },
-  { id: "dcas", label: "DCAs" },
-  { id: "effects", label: "Effects" },
-  { id: "tips", label: "Tips" },
+  { id: "quick-summary", label: "Quick Summary" },
+  { id: "quick-reference", label: "Quick Reference" },
+  { id: "volunteer-guide", label: "Volunteer Guide" },
+  { id: "service-tips", label: "Service-Day Tips" },
+  { id: "troubleshooting", label: "Troubleshooting" },
 ];
 
 function inputText(input: GuideInput): string {
@@ -32,11 +30,6 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
   const filteredInputs = guide.activeInputs.filter((input) => !query.trim() || matches(inputText(input), query));
   const filteredMixes = guide.monitorMixes.filter((mix) => !query.trim() || matches(`${mix.label} ${mix.purpose}`, query));
 
-  const copyMarkdown = async () => {
-    await navigator.clipboard.writeText(markdown);
-    toast.success("Volunteer guide copied");
-  };
-
   return (
     <article className={printMode ? "production-sheet volunteer-guide production-sheet-print" : "production-sheet volunteer-guide space-y-8"}>
       <header className="prod-header volunteer-guide-header">
@@ -44,7 +37,7 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
           <p className="prod-kicker">Volunteer Console Guide</p>
           <h1>{guide.sceneName}</h1>
           <p className="prod-muted mt-2 max-w-3xl">
-            A practical guide for upload, review, export, and team handoff. Use it to understand what each route does during a service.
+            A practical guide for service volunteers. Review the summary, check the key routes, then export and share it with your team.
           </p>
         </div>
         <div className="prod-meta">
@@ -62,25 +55,19 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Find a channel, monitor mix, DCA, or output..."
+                placeholder="Find a channel, monitor mix, group control, or output..."
                 aria-label="Search volunteer guide"
                 className="w-full rounded-md border bg-background py-2 pl-9 pr-3 text-sm"
               />
             </label>
             <Button
-              variant="secondary"
+              size="lg"
               onClick={() => {
                 downloadText(`${exportBaseName(scene)}-volunteer-guide.md`, markdown, "text/markdown");
                 toast.success("Volunteer guide downloaded");
               }}
             >
-              <Download className="mr-1.5 h-4 w-4" /> Export Guide
-            </Button>
-            <Button variant="outline" onClick={copyMarkdown}>
-              <Copy className="mr-1.5 h-4 w-4" /> Copy Markdown
-            </Button>
-            <Button variant="outline" onClick={() => window.print()}>
-              <Printer className="mr-1.5 h-4 w-4" /> Print
+              <Download className="mr-1.5 h-4 w-4" /> Export Volunteer Guide
             </Button>
           </div>
 
@@ -94,7 +81,26 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
         </>
       ) : null}
 
-      <section id="overview" className="guide-section">
+      <section id="quick-summary" className="guide-section">
+        <div className="prod-section-title guide-section-title">
+          <div><span className="prod-section-index">01</span><h2>Quick Summary</h2></div>
+          <span>Did the upload work?</span>
+        </div>
+        <div className="quick-ref-grid">
+          <SummaryCard label="Scene" value={guide.sceneName} />
+          <SummaryCard label="Console" value={scene.mixerType} />
+          <SummaryCard label="Inputs" value={`${guide.counts.activeInputs} active`} />
+          <SummaryCard label="Monitor Mixes" value={`${guide.counts.monitorMixes}`} />
+          <SummaryCard label="Main Speakers" value={guide.quickReference[0]?.value ?? "Check Main LR"} />
+          <SummaryCard label="Livestream" value={guide.quickReference[1]?.value ?? "Not clearly labeled"} />
+        </div>
+      </section>
+
+      <section id="quick-reference" className="guide-section">
+        <div className="prod-section-title guide-section-title">
+          <div><span className="prod-section-index">02</span><h2>Quick Reference</h2></div>
+          <span>Readable in 30 seconds</span>
+        </div>
         <div className="quick-ref-grid">
           {guide.quickReference.map((item) => (
             <div key={item.label} className="guide-card guide-card-accent">
@@ -108,11 +114,44 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
           <Metric icon={Mic2} label="Active Inputs" value={`${guide.counts.activeInputs}`} />
           <Metric icon={Headphones} label="Monitor Mixes" value={`${guide.counts.monitorMixes}`} />
           <Metric icon={Route} label="Outputs" value={`${guide.counts.outputs}`} />
-          <Metric icon={Layers3} label="Assigned DCAs" value={`${guide.counts.dcas}`} />
+          <Metric icon={Layers3} label="Group Controls" value={`${guide.counts.dcas}`} />
         </div>
       </section>
 
-      <GuideSection id="inputs" index="01" title="Input Channels" meta="What each source is">
+      <GuideSection id="volunteer-guide" index="03" title="Volunteer Guide" meta="What each area does">
+        <div className="guide-two-column">
+          <VolunteerInfo
+            title="Input Channels"
+            what="Microphones, instruments, playback, and other sound sources coming into the board."
+            who="Audio volunteers use these during line check and service mixing."
+            affects="The main room, monitor mixes, livestream, and recordings depending on routing."
+            avoid="Avoid changing input gain during service unless the technical director asks you to."
+          />
+          <VolunteerInfo
+            title="Monitor Mixes (Buses)"
+            what="Personal mixes for musicians, speakers, or other destinations."
+            who="Musicians, worship leaders, and stage teams."
+            affects="Usually only what someone hears on stage or in their in-ear monitors."
+            avoid="Do not change input gain to fix a monitor mix. Adjust the send to that monitor mix instead."
+          />
+          <VolunteerInfo
+            title="Group Volume Controls (DCAs)"
+            what="One fader that controls a group of related channels."
+            who="Volunteers use these for quick section-level changes."
+            affects="The channels assigned to that group without changing their individual mix balance."
+            avoid="Do not use a group control to fix one bad channel. Find the specific channel first."
+          />
+          <VolunteerInfo
+            title="Extra Output Feeds (Matrices)"
+            what="Additional feeds for lobby, overflow, fills, livestream, or recording paths."
+            who="Technical directors and advanced volunteers."
+            affects="Other rooms, streams, recordings, or distributed speakers."
+            avoid="Avoid changing these during service unless you know what destination they feed."
+          />
+        </div>
+      </GuideSection>
+
+      <GuideSection id="inputs" index="04" title="Input Channels" meta="What each source is">
         <div className="guide-list">
           {filteredInputs.length ? filteredInputs.map((input) => (
             <div key={input.channel.number} className="guide-row">
@@ -121,18 +160,18 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
                 <h3>{input.label}</h3>
                 <p>{input.channel.source ? `Source: ${input.channel.source}` : "Confirm the source during line check."}</p>
               </div>
-              <div className="guide-chip">{input.dcas.length ? `DCA ${input.dcas.join(", ")}` : "No DCA"}</div>
+              <div className="guide-chip">{input.dcas.length ? `Group ${input.dcas.join(", ")}` : "No group"}</div>
             </div>
           )) : <p className="prod-empty">No matching input channels. Clear search to show the full guide.</p>}
         </div>
       </GuideSection>
 
-      <GuideSection id="monitors" index="02" title="Monitor Mixes" meta="What musicians hear">
+      <GuideSection id="monitors" index="05" title="Monitor Mixes" meta="What musicians hear">
         <div className="guide-card-grid">
           {filteredMixes.length ? filteredMixes.map((mix) => (
             <div key={mix.bus.number} className="guide-card">
-              <span>Bus {channelNumber(mix.bus.number)}</span>
-              <h3>{mix.bus.name || "Unnamed mix"}</h3>
+              <span>Monitor Mix (Bus {channelNumber(mix.bus.number)})</span>
+              <h3>{mix.bus.name || "Unnamed monitor mix"}</h3>
               <p>{mix.purpose}</p>
               <small>Outputs: {mix.mappedOutputs.map((output) => `${output.outputType} ${output.number}`).join(", ") || "No mapped output parsed"}</small>
               <small>Common sources: {mix.sendingInputs.map((input) => input.label).join(", ") || "No active sends parsed"}</small>
@@ -141,7 +180,7 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
         </div>
       </GuideSection>
 
-      <GuideSection id="outputs" index="03" title="Main Outputs" meta="Where console audio leaves">
+      <GuideSection id="outputs" index="06" title="Main Outputs" meta="Where console audio leaves">
         <div className="guide-card-grid">
           {guide.mainOutputs.length ? guide.mainOutputs.map((item) => (
             <div key={`${item.output.outputType}-${item.output.number}`} className="guide-card">
@@ -153,11 +192,11 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
         </div>
       </GuideSection>
 
-      <GuideSection id="dcas" index="04" title="DCA Groups" meta="Fast group control">
+      <GuideSection id="dcas" index="07" title="Group Volume Controls" meta="Fast section-level control">
         <div className="guide-card-grid">
           {guide.dcaGroups.map((dca) => (
             <div key={dca.number} className="guide-card">
-              <span>DCA {dca.number}</span>
+              <span>Group Volume Control (DCA {dca.number})</span>
               <h3>{dca.name}</h3>
               <p>{dca.assignedInputs.length ? dca.assignedInputs.map((input) => input.label).join(", ") : "Unassigned"}</p>
             </div>
@@ -165,7 +204,7 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
         </div>
       </GuideSection>
 
-      <GuideSection id="effects" index="05" title="Effects" meta="Reverb, delay, and FX sends">
+      <GuideSection id="effects" index="08" title="Effects" meta="Reverb, delay, and FX sends">
         <div className="guide-card-grid">
           {guide.effects.length ? guide.effects.map((effect) => (
             <div key={effect.label} className="guide-card">
@@ -177,18 +216,22 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
         </div>
       </GuideSection>
 
-      <GuideSection id="tips" index="06" title="Volunteer Tips" meta="Service-day handoff">
-        <div className="guide-two-column">
-          <GuideList title="Volunteer Notes" items={guide.volunteerTips} />
-          <GuideList title="Troubleshooting" items={guide.troubleshooting} />
-        </div>
+      <GuideSection id="service-tips" index="09" title="Service-Day Tips" meta="What to do with this guide">
+        <GuideList title="Use this file to train volunteers, document your board setup, or share with your media team." items={guide.volunteerTips} />
+      </GuideSection>
+
+      <GuideSection id="troubleshooting" index="10" title="Troubleshooting" meta="What to check first">
+        <GuideList title="If something sounds wrong" items={guide.troubleshooting} />
       </GuideSection>
 
       <details className="prod-section advanced-console-details">
         <summary className="prod-section-title">
           <div><span className="prod-section-index"><SlidersHorizontal className="h-4 w-4" /></span><h2>Advanced Console Details</h2></div>
-          <span>Raw routing context</span>
+          <span>Mainly for technical directors and advanced users</span>
         </summary>
+        <p className="prod-muted mb-4">
+          This section includes AES50, Ultranet, patching, matrices, items RouteView could not fully explain, unknown scene lines, and raw routing details when available.
+        </p>
         <div className="guide-card-grid">
           <div className="guide-card">
             <span>Routing Blocks</span>
@@ -208,12 +251,51 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
   );
 }
 
+function SummaryCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="guide-card guide-summary-card">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
 function Metric({ icon: Icon, label, value }: { icon: typeof Mic2; label: string; value: string }) {
   return (
     <div className="guide-metric">
       <Icon className="h-4 w-4" />
       <span>{label}</span>
       <strong>{value}</strong>
+    </div>
+  );
+}
+
+function VolunteerInfo({
+  title,
+  what,
+  who,
+  affects,
+  avoid,
+}: {
+  title: string;
+  what: string;
+  who: string;
+  affects: string;
+  avoid: string;
+}) {
+  return (
+    <div className="guide-card volunteer-info-card">
+      <h3>{title}</h3>
+      <dl>
+        <dt>What it is</dt>
+        <dd>{what}</dd>
+        <dt>Who uses it</dt>
+        <dd>{who}</dd>
+        <dt>What it affects</dt>
+        <dd>{affects}</dd>
+        <dt>Avoid</dt>
+        <dd>{avoid}</dd>
+      </dl>
     </div>
   );
 }
@@ -240,4 +322,3 @@ function GuideList({ title, items }: { title: string; items: string[] }) {
     </div>
   );
 }
-

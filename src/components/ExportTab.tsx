@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import type { MixerScene } from "@/types/routing";
 import { Button } from "@/components/ui/button";
 import {
-  combinedCSV,
   defaultExportOptions,
   downloadText,
   exportBaseName,
@@ -10,11 +9,10 @@ import {
   sceneToHtml,
   sceneToJson,
   sceneToMarkdown,
-  sceneToPlainText,
   type ExportOptions,
   type ParserBucketGroup,
 } from "@/lib/exporters";
-import { Braces, Code2, Copy, Download, FileSpreadsheet, FileText, Printer, Settings2 } from "lucide-react";
+import { Braces, Code2, Copy, Download, FileText, Printer, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 
 export function ExportTab({ scene }: { scene: MixerScene }) {
@@ -27,7 +25,6 @@ export function ExportTab({ scene }: { scene: MixerScene }) {
   const md = useMemo(() => sceneToMarkdown(scene, exportOptions), [scene, exportOptions]);
   const html = useMemo(() => sceneToHtml(scene, exportOptions), [scene, exportOptions]);
   const json = useMemo(() => sceneToJson(scene), [scene]);
-  const plainText = useMemo(() => sceneToPlainText(scene, exportOptions), [scene, exportOptions]);
   const base = exportBaseName(scene);
 
   const updateOption = <K extends keyof ExportOptions>(key: K, value: ExportOptions[K]) => {
@@ -56,11 +53,10 @@ export function ExportTab({ scene }: { scene: MixerScene }) {
     <div className="export-workspace">
       <section className="primary-export-card">
         <div>
-          <p className="prod-kicker">Export Documentation</p>
-          <h2>Volunteer guide is ready</h2>
+          <p className="prod-kicker">Next: Export and Share</p>
+          <h2>Export Volunteer Guide</h2>
           <p>
-            Markdown is the best default for church teams because it works in Planning Center notes, shared drives,
-            GitHub, email, and most documentation tools.
+            Use this file to train volunteers, document your board setup, or share with your media team. Default format: Markdown.
           </p>
         </div>
         <div className="primary-export-actions">
@@ -81,9 +77,18 @@ export function ExportTab({ scene }: { scene: MixerScene }) {
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <div className="space-y-4">
-          <details className="panel p-4" open>
-            <summary className="cursor-pointer text-sm font-semibold">More Export Options</summary>
+          <details className="panel p-4">
+            <summary className="cursor-pointer text-sm font-semibold">More export options</summary>
             <div className="mt-4 grid gap-3">
+              <ExportButton
+                title="Markdown"
+                description="Best default for volunteer notes, shared drives, GitHub, and team documentation."
+                icon={FileText}
+                onClick={() => {
+                  downloadText(`${base}-volunteer-guide.md`, md, "text/markdown");
+                  toast.success("Markdown downloaded");
+                }}
+              />
               <ExportButton
                 title="HTML"
                 description="Standalone printable page for teams that want a single file."
@@ -94,26 +99,8 @@ export function ExportTab({ scene }: { scene: MixerScene }) {
                 }}
               />
               <ExportButton
-                title="Plain Text"
-                description="Simple text for email, service notes, or older systems."
-                icon={FileText}
-                onClick={() => {
-                  downloadText(`${base}-volunteer-guide.txt`, plainText, "text/plain");
-                  toast.success("Plain text downloaded");
-                }}
-              />
-              <ExportButton
-                title="CSV"
-                description="Spreadsheet-friendly routing data with selected advanced sections."
-                icon={FileSpreadsheet}
-                onClick={() => {
-                  downloadText(`${base}-routing.csv`, combinedCSV(scene, exportOptions), "text/csv");
-                  toast.success("CSV downloaded");
-                }}
-              />
-              <ExportButton
-                title="JSON"
-                description="Structured archive for automation or future RouteView import work."
+                title="JSON Advanced Export"
+                description="Structured scene archive for technical directors and advanced users."
                 icon={Braces}
                 onClick={() => {
                   downloadText(`${base}-routing.json`, json, "application/json");
@@ -132,18 +119,21 @@ export function ExportTab({ scene }: { scene: MixerScene }) {
           <details className="panel p-4">
             <summary className="cursor-pointer text-sm font-semibold">Advanced Console Details</summary>
             <div className="mt-4 space-y-4">
+              <p className="text-sm text-muted-foreground">
+                This section is mainly for technical directors and advanced users. It controls whether exported Markdown includes items RouteView could not fully explain, raw routing details, channel processing, and channel sends.
+              </p>
               <div className="grid gap-2 sm:grid-cols-2">
                 <CheckRow label="Console Settings" checked={!!exportOptions.includeSettings} onChange={(checked) => updateOption("includeSettings", checked)} />
                 <CheckRow label="Channel Processing" checked={!!exportOptions.includeChannelProcessing} onChange={(checked) => updateOption("includeChannelProcessing", checked)} />
                 <CheckRow label="Channel Sends" checked={!!exportOptions.includeChannelSends} onChange={(checked) => updateOption("includeChannelSends", checked)} />
-                <CheckRow label="Parser Bucket Summary" checked={!!exportOptions.includeUnrecognizedSummary} onChange={(checked) => updateOption("includeUnrecognizedSummary", checked)} />
-                <CheckRow label="Parser Bucket Examples" checked={!!exportOptions.includeUnrecognizedExamples} onChange={(checked) => updateOption("includeUnrecognizedExamples", checked)} />
-                <CheckRow label="Raw Debug Lines" checked={!!exportOptions.includeRawUnrecognized} onChange={(checked) => updateOption("includeRawUnrecognized", checked)} />
+                <CheckRow label="Items RouteView Could Not Fully Explain" checked={!!exportOptions.includeUnrecognizedSummary} onChange={(checked) => updateOption("includeUnrecognizedSummary", checked)} />
+                <CheckRow label="Examples RouteView Could Not Fully Explain" checked={!!exportOptions.includeUnrecognizedExamples} onChange={(checked) => updateOption("includeUnrecognizedExamples", checked)} />
+                <CheckRow label="Raw Routing Details" checked={!!exportOptions.includeRawUnrecognized} onChange={(checked) => updateOption("includeRawUnrecognized", checked)} />
               </div>
 
               <div className="border-t pt-3">
                 <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  <Settings2 className="h-3.5 w-3.5" /> Parser Bucket Tabs to Include
+                  <Settings2 className="h-3.5 w-3.5" /> Advanced areas to include
                 </div>
                 <div className="grid gap-2">
                   {parserBucketGroupLabels.map((bucket) => (
@@ -199,4 +189,3 @@ function ExportButton({
     </button>
   );
 }
-
