@@ -1,170 +1,78 @@
 import { useMemo, useState, type ReactNode } from "react";
-import type { InputChannel, MixerScene } from "@/types/routing";
-import {
-  buildDerivedSceneModel,
-  channelDisplayName,
-  channelNumber,
-  isDefaultOrUnusedInput,
-  type OutputBank,
-  type SignalTrace,
-} from "@/lib/sceneModel";
+import type { MixerScene } from "@/types/routing";
+import { buildVolunteerGuide, type GuideInput } from "@/lib/volunteerGuide";
+import { channelNumber } from "@/lib/sceneModel";
+import { Button } from "@/components/ui/button";
+import { Download, Headphones, Layers3, Mic2, Music2, Route, Search, SlidersHorizontal } from "lucide-react";
+import { downloadText, exportBaseName, sceneToMarkdown } from "@/lib/exporters";
+import { toast } from "sonner";
 
-type ColorMeta = { label: string; className: string };
-
-const COLOR_MAP: Record<string, ColorMeta> = {
-  RD: { label: "RED", className: "scribble-rd" },
-  GN: { label: "GREEN", className: "scribble-gn" },
-  YE: { label: "YELLOW", className: "scribble-ye" },
-  CY: { label: "CYAN", className: "scribble-cy" },
-  MG: { label: "MAGENTA", className: "scribble-mg" },
-  WH: { label: "WHITE", className: "scribble-wh" },
-  OFF: { label: "-", className: "scribble-off" },
-};
-
-const DOC_SECTIONS = [
-  { id: "inputs", label: "Inputs" },
-  { id: "dcas", label: "DCAs" },
-  { id: "buses", label: "Buses" },
-  { id: "outputs", label: "Outputs" },
-  { id: "traces", label: "Signal Traces" },
-  { id: "handoff", label: "Handoff Notes" },
+const SECTIONS = [
+  { id: "quick-summary", label: "Quick Summary" },
+  { id: "quick-reference", label: "Quick Reference" },
+  { id: "volunteer-guide", label: "Volunteer Guide" },
+  { id: "service-tips", label: "Service-Day Tips" },
+  { id: "troubleshooting", label: "Troubleshooting" },
 ];
 
-function colorMeta(color?: string): ColorMeta {
-  return COLOR_MAP[(color ?? "OFF").toUpperCase()] ?? COLOR_MAP.OFF;
+function inputText(input: GuideInput): string {
+  return `CH ${channelNumber(input.channel.number)} ${input.label} ${input.channel.source ?? ""} ${input.dcas.join(" ")}`;
 }
 
-function preampLabel(channel: InputChannel): string {
-  return channel.processing?.preamp || "-";
-}
-
-function dcaLabel(channel: InputChannel): string {
-  return (channel.dcaAssignments ?? []).join(", ") || "-";
-}
-
-function dcaAssignments(scene: MixerScene) {
-  return Array.from({ length: 8 }, (_, index) => {
-    const number = index + 1;
-    const dca = scene.dcas.find((item) => item.number === number);
-    const assigned = scene.inputs.filter((channel) => (dca?.assignedChannels ?? []).includes(channel.number));
-    return { number, name: dca?.name || `DCA ${number}`, assigned };
-  });
-}
-
-function matchesQuery(value: string, query: string): boolean {
+function matches(value: string, query: string): boolean {
   return value.toLowerCase().includes(query.trim().toLowerCase());
 }
 
-function Highlight({ value, query }: { value: string; query: string }) {
-  const trimmed = query.trim();
-  if (!trimmed) return <>{value}</>;
-  const index = value.toLowerCase().indexOf(trimmed.toLowerCase());
-  if (index < 0) return <>{value}</>;
-  return (
-    <>
-      {value.slice(0, index)}
-      <mark className="rounded-sm bg-warning/35 px-0.5 text-foreground">{value.slice(index, index + trimmed.length)}</mark>
-      {value.slice(index + trimmed.length)}
-    </>
-  );
-}
-
-function traceMatches(trace: SignalTrace, query: string): boolean {
-  if (!query.trim()) return true;
-  return trace.path.some((part) => matchesQuery(part, query));
-}
-
 export function ProductionSheet({ scene, printMode = false }: { scene: MixerScene; printMode?: boolean }) {
-  const [hideInactive, setHideInactive] = useState(true);
+  const guide = useMemo(() => buildVolunteerGuide(scene), [scene]);
+  const markdown = useMemo(() => sceneToMarkdown(scene), [scene]);
   const [query, setQuery] = useState("");
-  const generated = new Date(scene.parsedAt).toLocaleString();
-  const derived = useMemo(() => buildDerivedSceneModel(scene), [scene]);
-  const dcas = useMemo(() => dcaAssignments(scene), [scene]);
-
-  const inputChannels = useMemo(
-    () =>
-      (hideInactive ? derived.activeInputs : derived.inputs)
-        .map((item) => item.channel)
-        .filter((channel) => channel.number >= 1 && channel.number <= 32)
-        .filter((channel) => !query.trim() || matchesQuery(`CH ${channelNumber(channel.number)} ${channelDisplayName(channel)} ${channel.source ?? ""}`, query)),
-    [derived.activeInputs, derived.inputs, hideInactive, query],
-  );
-
-  const visibleBuses = useMemo(
-    () =>
-      (hideInactive ? derived.activeBuses : derived.buses).filter(
-        ({ bus }) => !query.trim() || matchesQuery(`Bus ${channelNumber(bus.number)} ${bus.name} ${bus.type ?? ""}`, query),
-      ),
-    [derived.activeBuses, derived.buses, hideInactive, query],
-  );
-
-  const visibleOutputBanks = useMemo(
-    () =>
-      (hideInactive ? derived.activeOutputBanks : derived.outputBanks)
-        .map((bank) => ({
-          ...bank,
-          outputs: bank.outputs.filter(
-            (output) => !query.trim() || matchesQuery(`${bank.title} ${output.number} ${output.source} ${output.notes ?? ""}`, query),
-          ),
-        }))
-        .filter((bank) => !query.trim() || bank.outputs.length > 0),
-    [derived.activeOutputBanks, derived.outputBanks, hideInactive, query],
-  );
-
-  const visibleRoutingBlocks = useMemo(
-    () => derived.routingBlocks.filter((block) => !query.trim() || matchesQuery(`${block.blockName} ${block.assignments.join(" ")}`, query)),
-    [derived.routingBlocks, query],
-  );
-
-  const visibleTraces = useMemo(
-    () => derived.signalTraces.filter((trace) => traceMatches(trace, query)).slice(0, 80),
-    [derived.signalTraces, query],
-  );
-
-  const visibleResultCount =
-    inputChannels.length +
-    visibleBuses.length +
-    visibleOutputBanks.reduce((sum, bank) => sum + bank.outputs.length, 0) +
-    visibleRoutingBlocks.length +
-    visibleTraces.length;
+  const filteredInputs = guide.activeInputs.filter((input) => !query.trim() || matches(inputText(input), query));
+  const filteredMixes = guide.monitorMixes.filter((mix) => !query.trim() || matches(`${mix.label} ${mix.purpose}`, query));
 
   return (
-    <div className={printMode ? "production-sheet production-sheet-print" : "production-sheet space-y-8"}>
-      <header className="prod-header">
+    <article className={printMode ? "production-sheet volunteer-guide production-sheet-print" : "production-sheet volunteer-guide space-y-8"}>
+      <header className="prod-header volunteer-guide-header">
         <div>
-          <p className="prod-kicker">X32 / M32 Production Sheet</p>
-          <h1>{scene.fileName ?? "Scene Documentation"}</h1>
+          <p className="prod-kicker">Volunteer Console Guide</p>
+          <h1>{guide.sceneName}</h1>
+          <p className="prod-muted mt-2 max-w-3xl">
+            A practical guide for service volunteers. Review the summary, check the key routes, then export and share it with your team.
+          </p>
         </div>
         <div className="prod-meta">
-          <div><strong>Scene File:</strong> {scene.fileName ?? "-"}</div>
-          <div><strong>Generated:</strong> {generated}</div>
+          <div><strong>Console:</strong> {scene.mixerType}</div>
+          <div><strong>Generated:</strong> {guide.generatedAt}</div>
+          <div><strong>Status:</strong> {scene.status}</div>
         </div>
       </header>
 
       {!printMode ? (
         <>
-          <div className="no-print prod-toolbar">
-            <label className="flex cursor-pointer items-center gap-2">
-              <input type="checkbox" checked={hideInactive} onChange={(event) => setHideInactive(event.target.checked)} />
-              <span>Hide inactive items</span>
+          <div className="no-print prod-toolbar volunteer-toolbar">
+            <label className="relative min-w-[260px] flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Find a channel, monitor mix, group control, or output..."
+                aria-label="Search volunteer guide"
+                className="w-full rounded-md border bg-background py-2 pl-9 pr-3 text-sm"
+              />
             </label>
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Quick find: channel, bus, output, route..."
-              aria-label="Search generated documentation"
-              className="min-w-[260px] flex-1 rounded-md border bg-background px-3 py-2 text-sm"
-            />
-            {query ? (
-              <button type="button" className="rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted" onClick={() => setQuery("")}>
-                Reset search
-              </button>
-            ) : null}
-            <span>{inputChannels.length} input / {visibleBuses.length} bus / {visibleOutputBanks.length} output bank</span>
+            <Button
+              size="lg"
+              onClick={() => {
+                downloadText(`${exportBaseName(scene)}-volunteer-guide.md`, markdown, "text/markdown");
+                toast.success("Volunteer guide downloaded");
+              }}
+            >
+              <Download className="mr-1.5 h-4 w-4" /> Export Volunteer Guide
+            </Button>
           </div>
 
-          <nav className="no-print prod-section-nav" aria-label="Documentation sections">
-            {DOC_SECTIONS.map((section) => (
+          <nav className="no-print prod-section-nav" aria-label="Volunteer guide sections">
+            {SECTIONS.map((section) => (
               <a key={section.id} href={`#${section.id}`}>
                 {section.label}
               </a>
@@ -173,147 +81,244 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
         </>
       ) : null}
 
-      {query && visibleResultCount === 0 ? (
-        <div className="prod-empty rounded-lg border">
-          No results found for "{query}". Try a channel name, bus number, output label, DCA name, route block, or warning text.
+      <section id="quick-summary" className="guide-section">
+        <div className="prod-section-title guide-section-title">
+          <div><span className="prod-section-index">01</span><h2>Quick Summary</h2></div>
+          <span>Did the upload work?</span>
         </div>
-      ) : null}
-
-      <DocSection id="inputs" index="01" title="Input Channels" meta="CH 01-32">
-        <div className="prod-table-wrap">
-          <table className="prod-table prod-input-table">
-            <thead><tr><th>Ch</th><th>Label / Name</th><th>Color</th><th>DCA Assignment</th><th>Preamp / Pad</th><th>Notes</th></tr></thead>
-            <tbody>
-              {inputChannels.map((channel) => {
-                const meta = colorMeta(channel.color);
-                return (
-                  <tr key={channel.number} className={isDefaultOrUnusedInput(channel) ? "opacity-70" : undefined}>
-                    <td className="prod-mono">{channelNumber(channel.number)}</td>
-                    <td className="prod-strong"><Highlight value={channelDisplayName(channel)} query={query} /></td>
-                    <td><span className={`scribble-chip ${meta.className}`}>{meta.label}</span></td>
-                    <td>{dcaLabel(channel)}</td>
-                    <td>{preampLabel(channel)}</td>
-                    <td>{channel.notes ?? ""}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          {!inputChannels.length ? <p className="prod-empty">No input channels found. Try clearing search or showing inactive items.</p> : null}
+        <div className="quick-ref-grid">
+          <SummaryCard label="Scene" value={guide.sceneName} />
+          <SummaryCard label="Console" value={scene.mixerType} />
+          <SummaryCard label="Inputs" value={`${guide.counts.activeInputs} active`} />
+          <SummaryCard label="Monitor Mixes" value={`${guide.counts.monitorMixes}`} />
+          <SummaryCard label="Main Speakers" value={guide.quickReference[0]?.value ?? "Check Main LR"} />
+          <SummaryCard label="Livestream" value={guide.quickReference[1]?.value ?? "Not clearly labeled"} />
         </div>
-      </DocSection>
+      </section>
 
-      <DocSection id="dcas" index="02" title="DCA Groups" meta="DCA 1-8">
-        <div className="dca-grid dca-fader-grid">
-          {dcas.map((dca) => {
-            const assigned = hideInactive ? dca.assigned.filter((channel) => !isDefaultOrUnusedInput(channel)) : dca.assigned;
-            return (
-              <div key={dca.number} className="dca-card dca-fader-card">
-                <div className="dca-card-head"><span className="dca-number">DCA {dca.number}</span><strong>{dca.name}</strong></div>
-                <div className="dca-fader-line" aria-hidden />
-                {assigned.length ? <ul>{assigned.map((channel) => <li key={channel.number}><span className="prod-mono">{channelNumber(channel.number)}</span> {channelDisplayName(channel)}</li>)}</ul> : <p className="prod-muted">Unassigned</p>}
-              </div>
-            );
-          })}
+      <section id="quick-reference" className="guide-section">
+        <div className="prod-section-title guide-section-title">
+          <div><span className="prod-section-index">02</span><h2>Quick Reference</h2></div>
+          <span>Readable in 30 seconds</span>
         </div>
-      </DocSection>
-
-      <DocSection id="buses" index="03" title="Mix Buses & Channel Sends" meta="Bus 01-16">
-        <div className="bus-grid">
-          {visibleBuses.map(({ bus, sendingInputs, mappedOutputs }) => (
-            <div key={bus.number} className="bus-card">
-              <div className="bus-card-head"><strong>Bus {channelNumber(bus.number)}</strong><span>{bus.name}</span></div>
-              <div className="bus-type bus-role-mix">{bus.type ?? "Mix Bus"}</div>
-              {mappedOutputs.length ? <p className="prod-muted">Mapped outputs: {mappedOutputs.map((output) => `${output.outputType} ${output.number}`).join(", ")}</p> : null}
-              {sendingInputs.length ? (
-                <ul>
-                  {sendingInputs.map(({ channel, send }) => (
-                    <li key={`${bus.number}-${channel.number}`}><span className="prod-mono">CH {channelNumber(channel.number)}</span> <Highlight value={channelDisplayName(channel)} query={query} /> - {send.level} {send.tap ? `(${send.tap})` : ""}</li>
-                  ))}
-                </ul>
-              ) : <p className="prod-muted">No parsed active sends.</p>}
+        <div className="quick-ref-grid">
+          {guide.quickReference.map((item) => (
+            <div key={item.label} className="guide-card guide-card-accent">
+              <span>{item.label}</span>
+              <strong>{item.value}</strong>
+              <p>{item.note}</p>
             </div>
           ))}
         </div>
-      </DocSection>
-
-      <DocSection id="outputs" index="04" title="Outputs & Routing Blocks" meta="Physical / Digital Routing">
-        <div className="patch-grid">
-          {visibleOutputBanks.map((bank) => <OutputBankCard key={bank.title} bank={bank} />)}
-          {visibleRoutingBlocks.map((block) => <PatchBlock key={block.blockName} title={`${block.blockName} Routing Block`} values={block.assignments} />)}
-          {!visibleOutputBanks.length && !visibleRoutingBlocks.length ? <p className="prod-muted">No outputs or routing blocks matched the current filter.</p> : null}
+        <div className="guide-metric-grid">
+          <Metric icon={Mic2} label="Active Inputs" value={`${guide.counts.activeInputs}`} />
+          <Metric icon={Headphones} label="Monitor Mixes" value={`${guide.counts.monitorMixes}`} />
+          <Metric icon={Route} label="Outputs" value={`${guide.counts.outputs}`} />
+          <Metric icon={Layers3} label="Group Controls" value={`${guide.counts.dcas}`} />
         </div>
-      </DocSection>
+      </section>
 
-      <DocSection id="traces" index="05" title="Signal Traces" meta="Derived from active sends and outputs">
-        <div className="trace-grid">
-          {visibleTraces.length ? visibleTraces.map((trace) => <TraceCard key={trace.id} trace={trace} />) : <p className="prod-muted">No signal traces matched the current filter.</p>}
+      <GuideSection id="volunteer-guide" index="03" title="Volunteer Guide" meta="What each area does">
+        <div className="guide-two-column">
+          <VolunteerInfo
+            title="Input Channels"
+            what="Microphones, instruments, playback, and other sound sources coming into the board."
+            who="Audio volunteers use these during line check and service mixing."
+            affects="The main room, monitor mixes, livestream, and recordings depending on routing."
+            avoid="Avoid changing input gain during service unless the technical director asks you to."
+          />
+          <VolunteerInfo
+            title="Monitor Mixes (Buses)"
+            what="Personal mixes for musicians, speakers, or other destinations."
+            who="Musicians, worship leaders, and stage teams."
+            affects="Usually only what someone hears on stage or in their in-ear monitors."
+            avoid="Do not change input gain to fix a monitor mix. Adjust the send to that monitor mix instead."
+          />
+          <VolunteerInfo
+            title="Group Volume Controls (DCAs)"
+            what="One fader that controls a group of related channels."
+            who="Volunteers use these for quick section-level changes."
+            affects="The channels assigned to that group without changing their individual mix balance."
+            avoid="Do not use a group control to fix one bad channel. Find the specific channel first."
+          />
+          <VolunteerInfo
+            title="Extra Output Feeds (Matrices)"
+            what="Additional feeds for lobby, overflow, fills, livestream, or recording paths."
+            who="Technical directors and advanced volunteers."
+            affects="Other rooms, streams, recordings, or distributed speakers."
+            avoid="Avoid changing these during service unless you know what destination they feed."
+          />
         </div>
-      </DocSection>
+      </GuideSection>
 
-      <DocSection id="handoff" index="06" title="Handoff Notes" meta="For volunteers and guest engineers">
-        <div className="handoff-grid">
-          <div className="patch-card">
-            <h3>Before service</h3>
-            <p className="prod-muted">Confirm the scene file name, input labels, DCA groups, monitor buses, and output patches match the current room setup.</p>
+      <GuideSection id="inputs" index="04" title="Input Channels" meta="What each source is">
+        <div className="guide-list">
+          {filteredInputs.length ? filteredInputs.map((input) => (
+            <div key={input.channel.number} className="guide-row">
+              <div className="guide-row-key">CH {channelNumber(input.channel.number)}</div>
+              <div>
+                <h3>{input.label}</h3>
+                <p>{input.channel.source ? `Source: ${input.channel.source}` : "Confirm the source during line check."}</p>
+              </div>
+              <div className="guide-chip">{input.dcas.length ? `Group ${input.dcas.join(", ")}` : "No group"}</div>
+            </div>
+          )) : <p className="prod-empty">No matching input channels. Clear search to show the full guide.</p>}
+        </div>
+      </GuideSection>
+
+      <GuideSection id="monitors" index="05" title="Monitor Mixes" meta="What musicians hear">
+        <div className="guide-card-grid">
+          {filteredMixes.length ? filteredMixes.map((mix) => (
+            <div key={mix.bus.number} className="guide-card">
+              <span>Monitor Mix (Bus {channelNumber(mix.bus.number)})</span>
+              <h3>{mix.bus.name || "Unnamed monitor mix"}</h3>
+              <p>{mix.purpose}</p>
+              <small>Outputs: {mix.mappedOutputs.map((output) => `${output.outputType} ${output.number}`).join(", ") || "No mapped output parsed"}</small>
+              <small>Common sources: {mix.sendingInputs.map((input) => input.label).join(", ") || "No active sends parsed"}</small>
+            </div>
+          )) : <p className="prod-muted">No active monitor mixes matched the current search.</p>}
+        </div>
+      </GuideSection>
+
+      <GuideSection id="outputs" index="06" title="Main Outputs" meta="Where console audio leaves">
+        <div className="guide-card-grid">
+          {guide.mainOutputs.length ? guide.mainOutputs.map((item) => (
+            <div key={`${item.output.outputType}-${item.output.number}`} className="guide-card">
+              <span>{item.label}</span>
+              <h3>{item.output.source}</h3>
+              <p>{item.purpose}</p>
+            </div>
+          )) : <p className="prod-muted">No active outputs were detected. Verify console routing before service.</p>}
+        </div>
+      </GuideSection>
+
+      <GuideSection id="dcas" index="07" title="Group Volume Controls" meta="Fast section-level control">
+        <div className="guide-card-grid">
+          {guide.dcaGroups.map((dca) => (
+            <div key={dca.number} className="guide-card">
+              <span>Group Volume Control (DCA {dca.number})</span>
+              <h3>{dca.name}</h3>
+              <p>{dca.assignedInputs.length ? dca.assignedInputs.map((input) => input.label).join(", ") : "Unassigned"}</p>
+            </div>
+          ))}
+        </div>
+      </GuideSection>
+
+      <GuideSection id="effects" index="08" title="Effects" meta="Reverb, delay, and FX sends">
+        <div className="guide-card-grid">
+          {guide.effects.length ? guide.effects.map((effect) => (
+            <div key={effect.label} className="guide-card">
+              <span><Music2 className="mr-1 inline h-3.5 w-3.5" /> Effect</span>
+              <h3>{effect.label}</h3>
+              <p>{effect.detail}</p>
+            </div>
+          )) : <p className="prod-muted">No named effects were detected in the parsed scene. Check the console effects rack if service uses effects.</p>}
+        </div>
+      </GuideSection>
+
+      <GuideSection id="service-tips" index="09" title="Service-Day Tips" meta="What to do with this guide">
+        <GuideList title="Use this file to train volunteers, document your board setup, or share with your media team." items={guide.volunteerTips} />
+      </GuideSection>
+
+      <GuideSection id="troubleshooting" index="10" title="Troubleshooting" meta="What to check first">
+        <GuideList title="If something sounds wrong" items={guide.troubleshooting} />
+      </GuideSection>
+
+      <details className="prod-section advanced-console-details">
+        <summary className="prod-section-title">
+          <div><span className="prod-section-index"><SlidersHorizontal className="h-4 w-4" /></span><h2>Advanced Console Details</h2></div>
+          <span>Mainly for technical directors and advanced users</span>
+        </summary>
+        <p className="prod-muted mb-4">
+          This section includes AES50, Ultranet, patching, matrices, items RouteView could not fully explain, unknown scene lines, and raw routing details when available.
+        </p>
+        <div className="guide-card-grid">
+          <div className="guide-card">
+            <span>Routing Blocks</span>
+            <p>{scene.routingBlocks.length ? scene.routingBlocks.map((block) => `${block.blockName}: ${block.assignments.join(", ")}`).join(" / ") : "No routing blocks parsed."}</p>
           </div>
-          <div className="patch-card">
-            <h3>Troubleshooting</h3>
-            <p className="prod-muted">Use Quick find to locate a channel, bus, output, DCA, or route block. Check warnings and uncategorized parser lines before relying on unsupported scene details.</p>
+          <div className="guide-card">
+            <span>Parser Categories</span>
+            <p>{scene.unrecognizedCategories.length ? scene.unrecognizedCategories.map((category) => `${category.category} (${category.count})`).join(", ") : "No parser bucket categories."}</p>
+          </div>
+          <div className="guide-card">
+            <span>Warnings</span>
+            <p>{scene.warnings.length ? scene.warnings.join(" ") : "No warnings."}</p>
           </div>
         </div>
-      </DocSection>
+      </details>
+    </article>
+  );
+}
+
+function SummaryCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="guide-card guide-summary-card">
+      <span>{label}</span>
+      <strong>{value}</strong>
     </div>
   );
 }
 
-function DocSection({ id, index, title, meta, children }: { id: string; index: string; title: string; meta: string; children: ReactNode }) {
+function Metric({ icon: Icon, label, value }: { icon: typeof Mic2; label: string; value: string }) {
   return (
-    <details id={id} className="prod-section" open>
-      <summary className="prod-section-title">
+    <div className="guide-metric">
+      <Icon className="h-4 w-4" />
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function VolunteerInfo({
+  title,
+  what,
+  who,
+  affects,
+  avoid,
+}: {
+  title: string;
+  what: string;
+  who: string;
+  affects: string;
+  avoid: string;
+}) {
+  return (
+    <div className="guide-card volunteer-info-card">
+      <h3>{title}</h3>
+      <dl>
+        <dt>What it is</dt>
+        <dd>{what}</dd>
+        <dt>Who uses it</dt>
+        <dd>{who}</dd>
+        <dt>What it affects</dt>
+        <dd>{affects}</dd>
+        <dt>Avoid</dt>
+        <dd>{avoid}</dd>
+      </dl>
+    </div>
+  );
+}
+
+function GuideSection({ id, index, title, meta, children }: { id: string; index: string; title: string; meta: string; children: ReactNode }) {
+  return (
+    <section id={id} className="prod-section guide-section">
+      <div className="prod-section-title guide-section-title">
         <div><span className="prod-section-index">{index}</span><h2>{title}</h2></div>
         <span>{meta}</span>
-      </summary>
-      {children}
-    </details>
-  );
-}
-
-function OutputBankCard({ bank }: { bank: OutputBank }) {
-  return (
-    <div className="patch-card output-bank-card">
-      <h3>{bank.title}</h3>
-      <div className="output-bank-grid">
-        {bank.outputs.length ? bank.outputs.map((output) => (
-          <div key={`${bank.title}-${output.number}`} className="output-port">
-            <span className="prod-mono">{String(output.number).padStart(2, "0")}</span>
-            <strong>{output.source}</strong>
-            {output.notes ? <small>{output.notes}</small> : null}
-          </div>
-        )) : <p className="prod-muted">No mapped outputs found.</p>}
       </div>
-    </div>
+      {children}
+    </section>
   );
 }
 
-function TraceCard({ trace }: { trace: SignalTrace }) {
+function GuideList({ title, items }: { title: string; items: string[] }) {
   return (
-    <div className="trace-card">
-      {trace.path.map((part, index) => (
-        <span key={`${trace.id}-${index}`}>
-          {index > 0 ? <b>-&gt;</b> : null}
-          {part}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-function PatchBlock({ title, values }: { title: string; values?: string[] }) {
-  return (
-    <div className="patch-card">
+    <div className="guide-card">
       <h3>{title}</h3>
-      {values?.length ? <div className="patch-pills">{values.map((value, index) => <span key={`${title}-${index}`} className="patch-pill">{value}</span>)}</div> : <p className="prod-muted">No routing block found.</p>}
+      <ul className="guide-bullets">
+        {items.map((item) => <li key={item}>{item}</li>)}
+      </ul>
     </div>
   );
 }

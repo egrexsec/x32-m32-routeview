@@ -17,11 +17,11 @@ export function validateSceneFile(file: SceneFileLike): string | null {
   const extension = file.name.includes(".") ? file.name.slice(file.name.lastIndexOf(".")).toLowerCase() : "";
 
   if (extension !== ACCEPTED_SCENE_EXTENSION) {
-    return "Choose a Behringer X32 or Midas M32 .scn scene file.";
+    return "This file is not a scene file. Please upload an X32 or M32 .scn file.";
   }
 
   if (file.size === 0) {
-    return "That scene file is empty. Export the scene from your console or X32-Edit, then try again.";
+    return "RouteView could not read this scene. Try exporting the scene again from your console or X32-Edit.";
   }
 
   if (file.size > MAX_SCENE_BYTES) {

@@ -1,7 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, FileText, FileUp, RefreshCcw, Sparkles, Trash2, X } from "lucide-react";
-import { Textarea } from "@/components/ui/textarea";
+import { CheckCircle2, FileUp, RefreshCcw, Sparkles, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { StatusBadge } from "./StatusBadge";
 import type { MixerScene } from "@/types/routing";
@@ -15,14 +14,11 @@ interface Props {
 }
 
 const STAGES = [
-  "Reading file",
-  "Parsing scene",
-  "Reading routing",
-  "Analyzing inputs",
-  "Analyzing outputs",
-  "Generating documentation",
-  "Building search index",
-  "Finalizing",
+  "Reading scene file...",
+  "Finding inputs...",
+  "Finding monitor mixes...",
+  "Finding outputs...",
+  "Building volunteer guide...",
 ];
 
 type UploadState =
@@ -34,7 +30,6 @@ type UploadState =
 export function UploadPanel({ scene, onParseText, onLoadDemo, onClear }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const readerRef = useRef<FileReader | null>(null);
-  const [pasted, setPasted] = useState("");
   const [dragging, setDragging] = useState(false);
   const [uploadState, setUploadState] = useState<UploadState>({ kind: "idle" });
 
@@ -54,7 +49,7 @@ export function UploadPanel({ scene, onParseText, onLoadDemo, onClear }: Props) 
       reader.onload = () => {
         try {
           const text = String(reader.result ?? "");
-          const stages = text.length > 120_000 ? STAGES : [STAGES[1], STAGES[2], STAGES[5], STAGES[7]];
+          const stages = STAGES;
           let stageIndex = 0;
           const runNextStage = () => {
             setUploadState({ kind: "processing", stage: stages[stageIndex], fileName: file.name });
@@ -64,18 +59,18 @@ export function UploadPanel({ scene, onParseText, onLoadDemo, onClear }: Props) 
               return;
             }
             onParseText(text, { fileName: file.name, fileSize: file.size });
-            setUploadState({ kind: "success", message: `${file.name} parsed successfully.` });
-            toast.success(`Parsed ${file.name}`);
+            setUploadState({ kind: "success", message: "Scene Analyzed Successfully. Your volunteer guide is ready." });
+            toast.success("Scene analyzed successfully");
             readerRef.current = null;
           };
           window.requestAnimationFrame(runNextStage);
         } catch (error) {
-          const message = error instanceof Error ? error.message : "RouteView could not parse this scene.";
+          const message = error instanceof Error ? error.message : "RouteView could not read this scene.";
           setUploadState({
             kind: "error",
-            message: `${message} Confirm the file is a valid X32/M32 scene export and try again.`,
+            message: `${message} Try exporting the scene again from your console or X32-Edit.`,
           });
-          toast.error("Scene parse failed");
+          toast.error("RouteView could not read this scene");
         }
       };
 
@@ -84,7 +79,7 @@ export function UploadPanel({ scene, onParseText, onLoadDemo, onClear }: Props) 
         readerRef.current = null;
       };
       reader.onerror = () => {
-        setUploadState({ kind: "error", message: "RouteView could not read that file. Check file permissions and try again." });
+        setUploadState({ kind: "error", message: "RouteView could not read this scene. Try exporting the scene again from your console or X32-Edit." });
         toast.error("Could not read file");
         readerRef.current = null;
       };
@@ -98,31 +93,17 @@ export function UploadPanel({ scene, onParseText, onLoadDemo, onClear }: Props) 
     setUploadState({ kind: "idle", message: "Upload canceled." });
   };
 
-  const parsePastedText = () => {
-    const text = pasted.trim();
-    if (!text) return;
-    try {
-      setUploadState({ kind: "processing", stage: "Parsing pasted scene", fileName: "pasted-scene.scn" });
-      onParseText(text, { fileName: "pasted-scene.scn", fileSize: text.length });
-      setUploadState({ kind: "success", message: "Pasted scene parsed successfully." });
-      toast.success("Parsed pasted scene");
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "RouteView could not parse the pasted scene.";
-      setUploadState({ kind: "error", message });
-      toast.error("Scene parse failed");
-    }
-  };
-
   return (
     <section className="panel panel-bg p-5 md:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold tracking-tight">Upload Scene File</h2>
+          <p className="prod-kicker">What should I do next?</p>
+          <h2 className="text-lg font-semibold tracking-tight">Step 1: Upload your .scn file</h2>
           <p className="text-sm text-muted-foreground">
-            Drag in a Behringer X32 or Midas M32 <code className="font-mono">.scn</code> file, or paste scene text below.
+            Drop your X32/M32 <code className="font-mono">.scn</code> file here, or click to choose a file.
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Processed locally in your browser. File upload accepts .scn scene files up to {formatBytes(MAX_SCENE_BYTES)}.
+            Accepted file type: .scn. Your file is analyzed in the browser.
           </p>
         </div>
         <div className="flex gap-2 no-print">
@@ -144,7 +125,7 @@ export function UploadPanel({ scene, onParseText, onLoadDemo, onClear }: Props) 
         </div>
       </div>
 
-      <div className="mt-5 grid gap-4 md:grid-cols-2">
+      <div className="mt-5">
         <div
           onDragOver={(event) => {
             event.preventDefault();
@@ -164,7 +145,7 @@ export function UploadPanel({ scene, onParseText, onLoadDemo, onClear }: Props) 
             }
           }}
           className={[
-            "relative flex min-h-[15rem] flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 text-center transition",
+            "relative flex min-h-[17rem] flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 text-center transition",
             dragging ? "border-primary bg-primary/5" : "border-border bg-muted/40",
           ].join(" ")}
           role="button"
@@ -172,8 +153,9 @@ export function UploadPanel({ scene, onParseText, onLoadDemo, onClear }: Props) 
           aria-label="Upload an X32 or M32 scene file"
         >
           <FileUp className="h-8 w-8 text-muted-foreground" />
-          <p className="mt-3 text-sm font-medium">{scene ? "Replace scene file" : "Drop .scn file here"}</p>
-          <p className="text-xs text-muted-foreground">or browse from your computer</p>
+          <p className="mt-3 text-base font-semibold">{scene ? "Drop a replacement X32/M32 .scn file here" : "Drop your X32/M32 .scn file here"}</p>
+          <p className="text-sm text-muted-foreground">or click to choose a file</p>
+          <p className="mt-2 text-xs text-muted-foreground">Accepted file type: .scn. Analyzed in your browser.</p>
           <Button size="sm" className="mt-2" onClick={() => inputRef.current?.click()}>
             {scene ? <RefreshCcw className="mr-1.5 h-4 w-4" /> : null}
             {scene ? "Replace File" : "Choose File"}
@@ -189,19 +171,6 @@ export function UploadPanel({ scene, onParseText, onLoadDemo, onClear }: Props) 
               event.target.value = "";
             }}
           />
-        </div>
-
-        <div className="flex flex-col">
-          <label className="text-xs font-medium text-muted-foreground">Or paste scene text</label>
-          <Textarea
-            value={pasted}
-            onChange={(event) => setPasted(event.target.value)}
-            placeholder={`# 4.06\n/ch/01/config "Kick" 1 YE 33\n/bus/01/config "Drums" 1 RD ...`}
-            className="mt-1 h-32 font-mono text-xs"
-          />
-          <Button size="sm" variant="secondary" className="mt-2 self-end" disabled={!pasted.trim()} onClick={parsePastedText}>
-            <FileText className="mr-1.5 h-4 w-4" /> Parse Text
-          </Button>
         </div>
       </div>
 

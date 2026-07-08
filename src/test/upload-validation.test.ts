@@ -7,11 +7,11 @@ describe("validateSceneFile", () => {
   });
 
   it("rejects files that are not scene files", () => {
-    expect(validateSceneFile({ name: "notes.txt", size: 2048 })).toContain(".scn scene file");
+    expect(validateSceneFile({ name: "notes.txt", size: 2048 })).toContain("Please upload an X32 or M32 .scn file");
   });
 
   it("rejects empty scene files", () => {
-    expect(validateSceneFile({ name: "empty.scn", size: 0 })).toContain("empty");
+    expect(validateSceneFile({ name: "empty.scn", size: 0 })).toContain("Try exporting the scene again");
   });
 
   it("rejects oversized scene files", () => {

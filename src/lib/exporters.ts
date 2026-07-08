@@ -1,4 +1,5 @@
 import type { MixerScene, UnrecognizedCategory } from "@/types/routing";
+import { buildVolunteerGuide } from "@/lib/volunteerGuide";
 
 export type ParserBucketGroup =
   | "Input Channel Processing"
@@ -40,7 +41,7 @@ export const defaultExportOptions: ExportOptions = {
   includeSettings: false,
   includeChannelProcessing: false,
   includeChannelSends: false,
-  includeUnrecognizedSummary: true,
+  includeUnrecognizedSummary: false,
   includeUnrecognizedExamples: false,
   includeRawUnrecognized: false,
   parserBucketGroups: [...parserBucketGroupLabels],
@@ -144,6 +145,198 @@ function sendsSummary(scene: MixerScene): (string | number | undefined)[][] {
 }
 
 export function sceneToMarkdown(scene: MixerScene, options?: ExportOptions): string {
+  const opts = resolvedOptions(options);
+  const guide = buildVolunteerGuide(scene);
+  const parserGroups = groupedParserCategories(scene, opts.parserBucketGroups);
+  const parserCategories = filteredParserCategories(scene, opts.parserBucketGroups);
+  const lines: string[] = [];
+
+  lines.push(`# ${guide.sceneName} Volunteer Console Guide`);
+  lines.push("");
+  lines.push("> A practical operating guide for church volunteers, worship leaders, and audio team handoffs.");
+  lines.push("");
+  lines.push("## Quick Summary");
+  lines.push("");
+  lines.push(
+    mdTable(
+      ["Field", "Value"],
+      [
+        ["Scene", guide.sceneName],
+        ["Console", scene.mixerType],
+        ["Inputs documented", `${guide.counts.activeInputs} active / ${guide.counts.inputs} parsed`],
+        ["Monitor mixes", guide.counts.monitorMixes],
+        ["Main outputs", guide.counts.outputs],
+        ["Group volume controls", guide.counts.dcas],
+        ["Effects found", guide.counts.effects],
+        ["Generated", guide.generatedAt],
+      ],
+    ),
+  );
+  lines.push("");
+
+  lines.push("## Quick Reference", "");
+  lines.push(mdTable(["Area", "What to Check", "Why It Matters"], guide.quickReference.map((item) => [item.label, item.value, item.note])));
+  lines.push("");
+
+  lines.push("## Console Overview", "");
+  lines.push("This scene was parsed locally by RouteView. Use this guide as an operating handoff, not as a replacement for listening in the room.");
+  if (scene.warnings.length) {
+    lines.push("");
+    lines.push(`**Review before service:** ${scene.warnings.length} item${scene.warnings.length === 1 ? "" : "s"} could not be fully explained. Check troubleshooting and advanced details before relying on unsupported scene details.`);
+  }
+  lines.push("");
+
+  lines.push("## Input Channels", "");
+  if (guide.activeInputs.length) {
+    lines.push(
+      mdTable(
+        ["Channel", "Name", "Source", "Group Volume Control", "Volunteer Note"],
+        guide.activeInputs.map((input) => [
+          input.channel.number,
+          input.label,
+          input.channel.source ?? "",
+          input.dcas.join(", "),
+          input.channel.notes || "Confirm label and source during line check.",
+        ]),
+      ),
+    );
+  } else {
+    lines.push("No active input labels were found. Review the console scene before handing this to a volunteer.");
+  }
+  lines.push("");
+
+  lines.push("## Monitor Mixes", "");
+  if (guide.monitorMixes.length) {
+    for (const mix of guide.monitorMixes) {
+      lines.push(`### ${mix.label}`);
+      lines.push("");
+      lines.push(`- **Purpose:** ${mix.purpose}`);
+      lines.push(`- **Mapped outputs:** ${mix.mappedOutputs.map((output) => `${output.outputType} ${output.number}`).join(", ") || "No mapped physical output found."}`);
+      lines.push(`- **Common sources:** ${mix.sendingInputs.map((input) => input.label).join(", ") || "No active sends parsed."}`);
+      lines.push("");
+    }
+  } else {
+    lines.push("No active monitor mixes were detected from parsed sends. Confirm monitor routing on the console before service.");
+  }
+  lines.push("");
+
+  lines.push("## Main Outputs", "");
+  if (guide.mainOutputs.length) {
+    lines.push(mdTable(["Output", "Source", "Practical Meaning"], guide.mainOutputs.map((item) => [item.label, item.output.source, item.purpose])));
+  } else {
+    lines.push("No active outputs were detected. Verify console routing before sharing this guide.");
+  }
+  lines.push("");
+
+  lines.push("## Group Volume Controls", "");
+  lines.push(
+    mdTable(
+      ["Console Label", "Name", "Controls"],
+      guide.dcaGroups.map((dca) => [dca.number, dca.name, dca.assignedInputs.length ? dca.assignedInputs.map((input) => input.label).join(", ") : "Unassigned"]),
+    ),
+  );
+  lines.push("");
+
+  lines.push("## Effects", "");
+  if (guide.effects.length) {
+    for (const effect of guide.effects) lines.push(`- **${effect.label}:** ${effect.detail}`);
+  } else {
+    lines.push("No named effects were detected in the parsed scene. Check the console effects rack if effects are used in service.");
+  }
+  lines.push("");
+
+  lines.push("## Volunteer Notes", "");
+  for (const tip of guide.volunteerTips) lines.push(`- ${tip}`);
+  lines.push("");
+
+  lines.push("## Service-Day Tips", "");
+  lines.push("- Line check every active input before rehearsal starts.");
+  lines.push("- Confirm pastor, worship leader, speaking mics, playback, and livestream audio before doors open.");
+  lines.push("- Keep this guide available at front-of-house or in the team shared folder.");
+  lines.push("");
+
+  lines.push("## Troubleshooting", "");
+  for (const item of guide.troubleshooting) lines.push(`- ${item}`);
+  lines.push("");
+
+  const includeAdvanced =
+    opts.includeSettings ||
+    opts.includeChannelProcessing ||
+    opts.includeChannelSends ||
+    opts.includeUnrecognizedSummary ||
+    opts.includeUnrecognizedExamples ||
+    opts.includeRawUnrecognized ||
+    scene.routingBlocks.length > 0 ||
+    scene.warnings.length > 0;
+
+  if (includeAdvanced) {
+    lines.push("---", "", "## Advanced Console Details", "");
+    lines.push("This section is mainly for technical directors and advanced users. It may include AES50, Ultranet, patching, matrices, items RouteView could not fully explain, unknown scene lines, and raw routing details.", "");
+  }
+
+  if (scene.routingBlocks.length) {
+    lines.push("### Routing Blocks", "");
+    for (const r of scene.routingBlocks) lines.push(`- **${r.blockName}** - ${r.assignments.join(", ")}`);
+    lines.push("");
+  }
+
+  if (opts.includeSettings && (scene.settings?.length ?? 0) > 0) {
+    lines.push("### Console Settings", "");
+    lines.push(mdTable(["Section", "Setting", "Value", "Notes"], (scene.settings ?? []).map((s) => [s.section, s.name, s.value, s.notes ?? ""])));
+    lines.push("");
+  }
+
+  if (opts.includeChannelProcessing && hasChannelProcessing(scene)) {
+    lines.push("### Channel Processing", "");
+    lines.push(mdTable(["Ch", "Name", "Delay", "Preamp", "Gate", "Dynamics", "EQ", "Main Mix", "Automix"], processingSummary(scene)));
+    lines.push("");
+  }
+
+  if (opts.includeChannelSends && hasChannelSends(scene)) {
+    lines.push("### Channel Sends", "");
+    lines.push(mdTable(["Ch", "Name", "Bus", "Enabled", "Level", "Pan", "Tap"], sendsSummary(scene)));
+    lines.push("");
+  }
+
+  if (opts.includeUnrecognizedSummary && parserGroups.length > 0) {
+    lines.push("### Items RouteView Could Not Fully Explain", "");
+    for (const group of parserGroups) {
+      lines.push(`#### ${group.bucket}`, "");
+      lines.push(mdTable(["Category", "Count", "Description"], group.categories.map((c) => [c.category, c.count, c.description])));
+      lines.push("");
+    }
+  }
+
+  if (opts.includeUnrecognizedExamples && parserCategories.length > 0) {
+    lines.push("### Examples RouteView Could Not Fully Explain", "");
+    for (const group of parserGroups) {
+      lines.push(`#### ${group.bucket}`, "");
+      for (const c of group.categories) {
+        lines.push(`##### ${c.category} (${c.count})`, "", "```txt");
+        lines.push(...c.examples);
+        lines.push("```", "");
+      }
+    }
+  }
+
+  if (opts.includeRawUnrecognized && scene.unrecognizedLines.length) {
+    lines.push("### Unknown Scene Line Sample", "", "```txt");
+    lines.push(...scene.unrecognizedLines);
+    lines.push("```", "");
+  }
+
+  if (scene.warnings.length) {
+    lines.push("### Warnings", "");
+    for (const w of scene.warnings) lines.push(`- ${w}`);
+    lines.push("");
+  }
+
+  lines.push("---");
+  lines.push("_Generated by X32/M32 RouteView - documentation tool, read-only._");
+  return lines.join("\n");
+}
+
+function legacySceneToMarkdown(scene: MixerScene, options?: ExportOptions): string {
   const opts = resolvedOptions(options);
   const parserGroups = groupedParserCategories(scene, opts.parserBucketGroups);
   const parserCategories = filteredParserCategories(scene, opts.parserBucketGroups);
