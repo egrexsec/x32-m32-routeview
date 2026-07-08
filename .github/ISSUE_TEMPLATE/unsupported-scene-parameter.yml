@@ -1,0 +1,148 @@
+name: Unsupported or Unknown Scene Parameter
+description: Report a scene parameter, routing value, or parser warning that RouteView could not fully interpret.
+title: "Unsupported parameter: "
+labels:
+  - parser
+  - unsupported-parameter
+  - needs-scene
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve RouteView parser coverage.
+
+        Use this form when RouteView shows a scene command, routing value, or console parameter as unknown, unsupported, or not fully explained.
+
+        Before submitting, please remove or rename:
+
+        - Church names
+        - Volunteer names
+        - Wi-Fi credentials
+        - IP addresses
+        - Passwords
+        - Livestream keys
+        - Internal notes
+        - Personal information
+
+        Only include the minimum scene information required to reproduce the parser issue.
+
+  - type: dropdown
+    id: console-model
+    attributes:
+      label: Console model
+      description: Which console or console-family scene produced this parameter?
+      options:
+        - Behringer X32
+        - Behringer X32 Compact
+        - Behringer X32 Producer
+        - Behringer X32 Rack
+        - Behringer X32 Core
+        - Midas M32
+        - Midas M32R
+        - Midas M32C
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: firmware-version
+    attributes:
+      label: Firmware version
+      description: Enter the console firmware version if known.
+      placeholder: "Example: 4.08, 4.09, 3.12"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: scene-source
+    attributes:
+      label: Scene source
+      description: How was the scene file exported or created?
+      options:
+        - Console Export
+        - X32-Edit
+        - M32-Edit
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: routeview-version
+    attributes:
+      label: RouteView version
+      description: Enter the RouteView version, branch, or commit SHA if known.
+      placeholder: "Example: v0.7.0, main branch, commit SHA"
+    validations:
+      required: true
+
+  - type: textarea
+    id: routeview-output
+    attributes:
+      label: What did RouteView show?
+      description: Paste the warning or explain what RouteView could not interpret.
+      placeholder: "Paste the warning text or describe the unsupported parameter here."
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-meaning
+    attributes:
+      label: Expected meaning
+      description: What did you expect this parameter or routing value to represent?
+      placeholder: "Explain what you believe this value controls or represents on the console."
+    validations:
+      required: true
+
+  - type: textarea
+    id: scene-snippet
+    attributes:
+      label: Relevant scene snippet
+      description: Paste only the relevant .scn lines if possible. Please remove sensitive information first.
+      render: text
+      placeholder: |
+        Paste relevant .scn lines here.
+
+        Remove church names, personal names, IP addresses, credentials, livestream keys, or private notes before submitting.
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshot
+      description: Drag screenshots here or paste them into the issue.
+      placeholder: "Attach screenshots of the RouteView warning or output here."
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Include any helpful context about the scene or routing setup.
+      placeholder: |
+        Examples:
+        - uncommon routing
+        - AES50 setup
+        - monitor console
+        - livestream routing
+        - custom patching
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: validation-checklist
+    attributes:
+      label: Submission checklist
+      description: Please confirm the report is safe and complete enough to review.
+      options:
+        - label: I removed sensitive information.
+          required: true
+        - label: I included the console model.
+          required: true
+        - label: I included the firmware version.
+          required: true
+        - label: I described what I expected RouteView to show.
+          required: true
+        - label: I attached a scene snippet or screenshot if possible.
+          required: true
