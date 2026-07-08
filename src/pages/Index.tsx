@@ -15,7 +15,7 @@ import { parseSceneText } from "@/parsers/x32M32Parser";
 import { demoScene } from "@/lib/demoScene";
 import type { MixerScene } from "@/types/routing";
 import { Button } from "@/components/ui/button";
-import { ArrowDown, ArrowUp, CheckCircle2, Download, FileText, FileUp, Share2, Sparkles } from "lucide-react";
+import { ArrowDown, ArrowUp, CheckCircle2, FileDown, FileText, FileUp, Share2, Sparkles } from "lucide-react";
 import { buildVolunteerGuide } from "@/lib/volunteerGuide";
 
 const Index = () => {
@@ -79,8 +79,8 @@ const Index = () => {
                     <h2 className="text-2xl font-bold tracking-tight">Volunteer guide</h2>
                     <p className="mt-1 text-sm text-muted-foreground">Next: export and share this guide with your team.</p>
                   </div>
-                  <Button size="lg" onClick={() => document.getElementById("export-documentation")?.scrollIntoView({ behavior: "smooth" })}>
-                    <Download className="mr-1.5 h-4 w-4" /> Export Volunteer Guide
+                  <Button size="lg" onClick={() => window.print()}>
+                    <FileDown className="mr-1.5 h-4 w-4" /> Export PDF
                   </Button>
                 </div>
                 <ProductionSheet scene={scene} />
@@ -148,11 +148,11 @@ function DocumentationReadyPanel({ scene }: { scene: MixerScene }) {
         <ReadyMetric label="FX" value={`${guide.counts.effects}`} />
       </div>
       <div className="ready-actions">
-        <Button size="lg" onClick={() => document.getElementById("export-documentation")?.scrollIntoView({ behavior: "smooth" })}>
-          <Download className="mr-1.5 h-4 w-4" /> Export Volunteer Guide
+        <Button size="lg" onClick={() => window.print()}>
+          <FileDown className="mr-1.5 h-4 w-4" /> Export PDF
         </Button>
-        <button type="button" onClick={() => document.getElementById("documentation")?.scrollIntoView({ behavior: "smooth" })}>
-          Review guide below before exporting
+        <button type="button" onClick={() => document.getElementById("export-documentation")?.scrollIntoView({ behavior: "smooth" })}>
+          More export options
         </button>
       </div>
     </section>
@@ -208,7 +208,7 @@ function EmptyHint() {
       <div className="workflow-steps mt-8">
         <WorkflowStep icon={FileUp} title="Step 1: Upload your .scn file" text="Drop your X32/M32 scene file into the upload box." />
         <WorkflowStep icon={FileText} title="Step 2: Review the generated guide" text="Check the summary, quick reference, monitor mixes, and team notes." />
-        <WorkflowStep icon={Share2} title="Step 3: Export it for your team" text="Download Markdown, print to PDF, or share a copy with volunteers." />
+        <WorkflowStep icon={Share2} title="Step 3: Export it for your team" text="Print or save the PDF, with Markdown and HTML available as secondary options." />
       </div>
     </div>
   );

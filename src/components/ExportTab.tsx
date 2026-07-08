@@ -54,20 +54,19 @@ export function ExportTab({ scene }: { scene: MixerScene }) {
       <section className="primary-export-card">
         <div>
           <p className="prod-kicker">Next: Export and Share</p>
-          <h2>Export Volunteer Guide</h2>
+          <h2>Export PDF</h2>
           <p>
-            Use this file to train volunteers, document your board setup, or share with your media team. Default format: Markdown.
+            Use the print-ready PDF as the default handoff for volunteers, worship leaders, and technical directors.
           </p>
         </div>
         <div className="primary-export-actions">
           <Button
             size="lg"
             onClick={() => {
-              downloadText(`${base}-volunteer-guide.md`, md, "text/markdown");
-              toast.success("Volunteer guide downloaded");
+              window.print();
             }}
           >
-            <Download className="mr-1.5 h-4 w-4" /> Export Volunteer Guide
+            <Printer className="mr-1.5 h-4 w-4" /> Print / Save as PDF
           </Button>
           <Button size="lg" variant="secondary" onClick={copyMarkdown}>
             <Copy className="mr-1.5 h-4 w-4" /> {copied ? "Copied" : "Copy Markdown"}
@@ -82,7 +81,7 @@ export function ExportTab({ scene }: { scene: MixerScene }) {
             <div className="mt-4 grid gap-3">
               <ExportButton
                 title="Markdown"
-                description="Best default for volunteer notes, shared drives, GitHub, and team documentation."
+                description="Useful for shared drives, GitHub, and editable team documentation."
                 icon={FileText}
                 onClick={() => {
                   downloadText(`${base}-volunteer-guide.md`, md, "text/markdown");
@@ -109,7 +108,7 @@ export function ExportTab({ scene }: { scene: MixerScene }) {
               />
               <ExportButton
                 title="Print / Save as PDF"
-                description="Open the browser print dialog and choose Save as PDF."
+                description="Default professional handoff with the condensed chart and volunteer guide."
                 icon={Printer}
                 onClick={() => window.print()}
               />

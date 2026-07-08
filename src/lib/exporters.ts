@@ -1,5 +1,6 @@
 import type { MixerScene, UnrecognizedCategory } from "@/types/routing";
 import { buildVolunteerGuide } from "@/lib/volunteerGuide";
+import { channelNumber } from "@/lib/sceneModel";
 
 export type ParserBucketGroup =
   | "Input Channel Processing"
@@ -144,6 +145,44 @@ function sendsSummary(scene: MixerScene): (string | number | undefined)[][] {
   );
 }
 
+function condensedInputRows(scene: MixerScene): (string | number | undefined)[][] {
+  return scene.inputs
+    .filter((input) => input.name?.trim() && !input.name.toLowerCase().includes("unused"))
+    .map((input) => [
+      `CH ${channelNumber(input.number)}`,
+      input.name,
+      input.source ?? "Confirm",
+      (input.dcaAssignments ?? []).join(", ") || "-",
+      (input.sends ?? [])
+        .filter((send) => send.enabled && send.level !== "-oo")
+        .map((send) => `Bus ${channelNumber(send.bus)} ${send.level}`)
+        .join(", ") || "No active sends parsed",
+    ]);
+}
+
+function condensedBusRows(scene: MixerScene): (string | number | undefined)[][] {
+  return scene.buses.map((bus) => {
+    const sendingInputs = scene.inputs
+      .filter((input) => (input.sends ?? []).some((send) => send.bus === bus.number && send.enabled && send.level !== "-oo"))
+      .map((input) => input.name);
+    const mappedOutputs = scene.outputs
+      .filter((output) => {
+        const source = output.source.toLowerCase();
+        return source.includes(`bus ${bus.number}`) || source.includes(`bus ${channelNumber(bus.number)}`) || source.includes(bus.name.toLowerCase());
+      })
+      .map((output) => `${output.outputType} ${output.number}`);
+    return [`Bus ${channelNumber(bus.number)}`, bus.name || "Unnamed", bus.type ?? "Mix Bus", sendingInputs.join(", ") || "No active sends parsed", mappedOutputs.join(", ") || "Verify patch"];
+  });
+}
+
+function condensedDcaRows(scene: MixerScene): (string | number | undefined)[][] {
+  return scene.dcas.map((dca) => [`DCA ${dca.number}`, dca.name, (dca.assignedChannels ?? []).map((channel) => `CH ${channelNumber(channel)}`).join(", ") || "Unassigned"]);
+}
+
+function condensedOutputRows(scene: MixerScene): (string | number | undefined)[][] {
+  return scene.outputs.map((output) => [`${output.outputType} ${output.number}`, output.source, output.notes ?? ""]);
+}
+
 export function sceneToMarkdown(scene: MixerScene, options?: ExportOptions): string {
   const opts = resolvedOptions(options);
   const guide = buildVolunteerGuide(scene);
@@ -176,6 +215,20 @@ export function sceneToMarkdown(scene: MixerScene, options?: ExportOptions): str
 
   lines.push("## Quick Reference", "");
   lines.push(mdTable(["Area", "What to Check", "Why It Matters"], guide.quickReference.map((item) => [item.label, item.value, item.note])));
+  lines.push("");
+
+  lines.push("## Professional Condensed Routing Chart", "");
+  lines.push("### Inputs and Sends", "");
+  lines.push(mdTable(["Ch", "Input", "Source", "DCA", "Active Sends"], condensedInputRows(scene)));
+  lines.push("");
+  lines.push("### Buses", "");
+  lines.push(mdTable(["Bus", "Name", "Type", "Feeds From", "Output"], condensedBusRows(scene)));
+  lines.push("");
+  lines.push("### DCAs", "");
+  lines.push(mdTable(["DCA", "Name", "Assigned Channels"], condensedDcaRows(scene)));
+  lines.push("");
+  lines.push("### Outputs", "");
+  lines.push(mdTable(["Output", "Source", "Notes"], condensedOutputRows(scene)));
   lines.push("");
 
   lines.push("## Console Overview", "");
@@ -599,14 +652,15 @@ export function sceneToHtml(scene: MixerScene, options?: ExportOptions): string 
       ["Output patches", scene.outputs.length],
       ["Warnings", scene.warnings.length],
     ])}
-    <h2>Inputs</h2>
-    ${htmlTable(["Ch", "Name", "Source", "DCA", "Color", "Notes"], scene.inputs.map((c) => [c.number, c.name, c.source ?? "", (c.dcaAssignments ?? []).join(", "), c.color ?? "", c.notes ?? ""]))}
+    <h2>Professional Condensed Routing Chart</h2>
+    <h2>Inputs and Sends</h2>
+    ${htmlTable(["Ch", "Input", "Source", "DCA", "Active Sends"], condensedInputRows(scene))}
     <h2>Mix Buses</h2>
-    ${htmlTable(["Bus", "Name", "Type", "Notes"], scene.buses.map((b) => [b.number, b.name, b.type ?? "", b.notes ?? ""]))}
+    ${htmlTable(["Bus", "Name", "Type", "Feeds From", "Output"], condensedBusRows(scene))}
     <h2>DCA Groups</h2>
-    ${htmlTable(["DCA", "Name", "Assigned Channels"], scene.dcas.map((d) => [d.number, d.name, (d.assignedChannels ?? []).join(", ")]))}
+    ${htmlTable(["DCA", "Name", "Assigned Channels"], condensedDcaRows(scene))}
     <h2>Output Patches</h2>
-    ${htmlTable(["Type", "#", "Source", "Notes"], scene.outputs.map((o) => [o.outputType, o.number, o.source, o.notes ?? ""]))}
+    ${htmlTable(["Output", "Source", "Notes"], condensedOutputRows(scene))}
     ${scene.warnings.length ? `<h2>Warnings</h2><ul>${scene.warnings.map((warning) => `<li>${escapeHtml(warning)}</li>`).join("")}</ul>` : ""}
     <h2>Markdown Source</h2>
     <pre>${escapeHtml(markdown)}</pre>
