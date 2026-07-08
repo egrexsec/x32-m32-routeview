@@ -97,3 +97,63 @@ When opening an issue, include:
 - actual output/screenshot
 - console model and firmware if known
 - whether the bug is parser, UI, export, or documentation related
+
+## Reporting missing or unsupported scene parameters
+
+RouteView is intentionally conservative. If the app shows a scene command, routing value, or console parameter as **unknown**, **unsupported**, or **not fully explained**, please open an issue so support can be improved.
+
+This is especially helpful for:
+- older X32 firmware versions
+- M32, M32R, and M32C scenes
+- X32 Producer, Compact, Rack, and Core scenes
+- uncommon routing configurations
+- AES50, Ultranet, matrix, and output patching differences
+- scene files created in X32-Edit or M32-Edit
+
+### What to include
+
+Please include as much of the following as possible:
+
+```text
+Console model:
+Firmware version:
+Software used to export scene:
+Scene source: console / X32-Edit / M32-Edit
+RouteView version or commit:
+Parameter shown as missing/unknown:
+What you expected it to mean:
+Screenshot of the RouteView warning:
+Relevant .scn lines if safe to share:
+```
+
+### Public safety
+
+Do **not** share sensitive information such as:
+- church names
+- private network details
+- Wi-Fi passwords
+- internal IP addresses
+- personal names
+- private service notes
+- livestream keys
+- credentials or tokens
+
+If your `.scn` file contains sensitive names, rename channels or redact the file before sharing.
+
+### Helpful issue title format
+
+```text
+Unsupported parameter: [parameter name] on [console model] firmware [version]
+```
+
+Example:
+
+```text
+Unsupported parameter: /config/routing/AES50 on M32R firmware 4.06
+```
+
+### Why this matters
+
+RouteView improves by learning from real-world scene files. Different firmware versions and console models may include routing or scene parameters that are not available in the examples currently used for development.
+
+Reports like this help improve parser coverage without guessing.
