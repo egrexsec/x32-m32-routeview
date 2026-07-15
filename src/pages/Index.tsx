@@ -17,9 +17,11 @@ import type { MixerScene } from "@/types/routing";
 import { Button } from "@/components/ui/button";
 import { ArrowDown, ArrowUp, CheckCircle2, FileDown, FileText, FileUp, Share2, Sparkles } from "lucide-react";
 import { buildVolunteerGuide } from "@/lib/volunteerGuide";
+import { defaultPrintOptions, type PrintOptions } from "@/lib/printOptions";
 
 const Index = () => {
   const [scene, setScene] = useState<MixerScene | null>(null);
+  const [printOptions, setPrintOptions] = useState<PrintOptions>(defaultPrintOptions);
   const documentationRef = useRef<HTMLDivElement | null>(null);
 
   const handleParse = useCallback(
@@ -87,7 +89,7 @@ const Index = () => {
               </section>
 
               <section id="export-documentation" className="scroll-mt-6">
-                <ExportTab scene={scene} />
+                <ExportTab scene={scene} printOptions={printOptions} onPrintOptionsChange={setPrintOptions} />
               </section>
 
               <details className="panel p-4 md:p-6">
@@ -110,7 +112,7 @@ const Index = () => {
         RouteView is a documentation tool. It does not connect to a console or modify scene data.
       </footer>
 
-      {scene ? <PrintView scene={scene} /> : null}
+      {scene ? <PrintView scene={scene} options={printOptions} /> : null}
 
       {scene ? (
         <button

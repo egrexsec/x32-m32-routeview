@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability privately
+    url: https://github.com/egrexsec/x32-m32-routeview/security/advisories/new
+    about: Do not publish vulnerability details in a public issue.
