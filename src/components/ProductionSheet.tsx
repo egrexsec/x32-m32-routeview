@@ -4,6 +4,7 @@ import { buildVolunteerGuide, type GuideInput } from "@/lib/volunteerGuide";
 import { channelNumber } from "@/lib/sceneModel";
 import { Button } from "@/components/ui/button";
 import { FileDown, Headphones, Layers3, Mic2, Music2, Route, Search, SlidersHorizontal } from "lucide-react";
+import { defaultPrintOptions, type PrintOptions } from "@/lib/printOptions";
 
 const SECTIONS = [
   { id: "quick-summary", label: "Quick Summary" },
@@ -37,14 +38,36 @@ function outputSummary(scene: MixerScene, source: string): string {
   return outputs.length ? outputs.join(", ") : "Verify patch";
 }
 
-export function ProductionSheet({ scene, printMode = false }: { scene: MixerScene; printMode?: boolean }) {
+export function ProductionSheet({ scene, printMode = false, printOptions = defaultPrintOptions }: { scene: MixerScene; printMode?: boolean; printOptions?: PrintOptions }) {
   const guide = useMemo(() => buildVolunteerGuide(scene), [scene]);
   const [query, setQuery] = useState("");
   const filteredInputs = guide.activeInputs.filter((input) => !query.trim() || matches(inputText(input), query));
   const filteredMixes = guide.monitorMixes.filter((mix) => !query.trim() || matches(`${mix.label} ${mix.purpose}`, query));
+  const visibleDcas = printOptions.showUnassigned ? guide.dcaGroups : guide.dcaGroups.filter((dca) => dca.assignedInputs.length);
 
   return (
     <article className={printMode ? "production-sheet volunteer-guide production-sheet-print" : "production-sheet volunteer-guide space-y-8"}>
+      {printMode && printOptions.includeCover ? (
+        <section className="print-cover">
+          <div className="print-cover-brand">X32 / M32 RouteView</div>
+          <div className="print-cover-rule" />
+          <p className="print-cover-type">{printOptions.profile === "technical" ? "Technical Routing Report" : "Volunteer Console Guide"}</p>
+          <h1>{printOptions.documentTitle || guide.sceneName}</h1>
+          {printOptions.venueName ? <h2>{printOptions.venueName}</h2> : null}
+          <div className="print-cover-summary">
+            <div><span>Scene</span><strong>{guide.sceneName}</strong></div>
+            <div><span>Console</span><strong>{scene.mixerType}</strong></div>
+            <div><span>Status</span><strong>{scene.status}</strong></div>
+            <div><span>Revision</span><strong>{printOptions.revision || "-"}</strong></div>
+          </div>
+          <div className="print-cover-meta">
+            {printOptions.preparedBy ? <span>Prepared by {printOptions.preparedBy}</span> : null}
+            <span>Generated {guide.generatedAt}</span>
+            {printOptions.confidential ? <strong>INTERNAL / CONFIDENTIAL</strong> : null}
+          </div>
+        </section>
+      ) : null}
+
       <header className="prod-header volunteer-guide-header">
         <div>
           <p className="prod-kicker">Volunteer Console Guide</p>
@@ -108,7 +131,7 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
         </div>
       </section>
 
-      <GuideSection id="routing-chart" index="02" title="Professional Condensed Routing Chart" meta="Inputs, buses, DCAs, and outputs">
+      <GuideSection id="routing-chart" index="02" title="Professional Routing Chart" meta="Inputs, buses, DCAs, and outputs" className="routing-chart-section">
         <div className="condensed-chart-grid">
           <div className="condensed-chart-panel">
             <h3>Inputs and Sends</h3>
@@ -204,7 +227,7 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
         </div>
       </section>
 
-      <GuideSection id="volunteer-guide" index="04" title="Volunteer Guide" meta="What each area does">
+      {(!printMode || printOptions.profile === "volunteer") ? <GuideSection id="volunteer-guide" index="04" title="Volunteer Guide" meta="What each area does">
         <div className="guide-two-column">
           <VolunteerInfo
             title="Input Channels"
@@ -235,7 +258,7 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
             avoid="Avoid changing these during service unless you know what destination they feed."
           />
         </div>
-      </GuideSection>
+      </GuideSection> : null}
 
       <GuideSection id="inputs" index="05" title="Input Channels" meta="What each source is">
         <div className="guide-list">
@@ -280,7 +303,7 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
 
       <GuideSection id="dcas" index="08" title="Group Volume Controls" meta="Fast section-level control">
         <div className="guide-card-grid">
-          {guide.dcaGroups.map((dca) => (
+          {visibleDcas.map((dca) => (
             <div key={dca.number} className="guide-card">
               <span>Group Volume Control (DCA {dca.number})</span>
               <h3>{dca.name}</h3>
@@ -302,15 +325,15 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
         </div>
       </GuideSection>
 
-      <GuideSection id="service-tips" index="10" title="Service-Day Tips" meta="What to do with this guide">
+      {(!printMode || printOptions.profile === "volunteer") ? <GuideSection id="service-tips" index="10" title="Service-Day Tips" meta="What to do with this guide">
         <GuideList title="Use this file to train volunteers, document your board setup, or share with your media team." items={guide.volunteerTips} />
-      </GuideSection>
+      </GuideSection> : null}
 
-      <GuideSection id="troubleshooting" index="11" title="Troubleshooting" meta="What to check first">
+      {(!printMode || printOptions.includeTroubleshooting) ? <GuideSection id="troubleshooting" index="11" title="Troubleshooting" meta="What to check first">
         <GuideList title="If something sounds wrong" items={guide.troubleshooting} />
-      </GuideSection>
+      </GuideSection> : null}
 
-      <details className="prod-section advanced-console-details">
+      {(!printMode || printOptions.includeAdvanced || printOptions.profile === "technical") ? <details className="prod-section advanced-console-details" open={printMode ? true : undefined}>
         <summary className="prod-section-title">
           <div><span className="prod-section-index"><SlidersHorizontal className="h-4 w-4" /></span><h2>Advanced Console Details</h2></div>
           <span>Mainly for technical directors and advanced users</span>
@@ -332,7 +355,15 @@ export function ProductionSheet({ scene, printMode = false }: { scene: MixerScen
             <p>{scene.warnings.length ? scene.warnings.join(" ") : "No warnings."}</p>
           </div>
         </div>
-      </details>
+      </details> : null}
+
+      {printMode ? (
+        <footer className="print-footer">
+          <span>{printOptions.venueName || "RouteView"}</span>
+          <span>{guide.sceneName} · Rev {printOptions.revision || "-"}</span>
+          <span>{printOptions.confidential ? "INTERNAL / CONFIDENTIAL" : "Generated by RouteView"}</span>
+        </footer>
+      ) : null}
     </article>
   );
 }
@@ -386,9 +417,9 @@ function VolunteerInfo({
   );
 }
 
-function GuideSection({ id, index, title, meta, children }: { id: string; index: string; title: string; meta: string; children: ReactNode }) {
+function GuideSection({ id, index, title, meta, className = "", children }: { id: string; index: string; title: string; meta: string; className?: string; children: ReactNode }) {
   return (
-    <section id={id} className="prod-section guide-section">
+    <section id={id} className={`prod-section guide-section ${className}`.trim()}>
       <div className="prod-section-title guide-section-title">
         <div><span className="prod-section-index">{index}</span><h2>{title}</h2></div>
         <span>{meta}</span>

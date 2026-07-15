@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import type { MixerScene } from "@/types/routing";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,8 +14,17 @@ import {
 } from "@/lib/exporters";
 import { Braces, Code2, Copy, Download, FileText, Printer, Settings2 } from "lucide-react";
 import { toast } from "sonner";
+import { printThemeLabels, type PrintOptions } from "@/lib/printOptions";
 
-export function ExportTab({ scene }: { scene: MixerScene }) {
+export function ExportTab({
+  scene,
+  printOptions,
+  onPrintOptionsChange,
+}: {
+  scene: MixerScene;
+  printOptions: PrintOptions;
+  onPrintOptionsChange: (options: PrintOptions) => void;
+}) {
   const [exportOptions, setExportOptions] = useState<ExportOptions>({
     ...defaultExportOptions,
     parserBucketGroups: [...parserBucketGroupLabels],
@@ -41,6 +50,9 @@ export function ExportTab({ scene }: { scene: MixerScene }) {
   };
 
   const selectedBuckets = new Set(exportOptions.parserBucketGroups ?? []);
+  const updatePrintOption = <K extends keyof PrintOptions>(key: K, value: PrintOptions[K]) => {
+    onPrintOptionsChange({ ...printOptions, [key]: value });
+  };
 
   const copyMarkdown = async () => {
     await navigator.clipboard.writeText(md);
@@ -71,6 +83,59 @@ export function ExportTab({ scene }: { scene: MixerScene }) {
           <Button size="lg" variant="secondary" onClick={copyMarkdown}>
             <Copy className="mr-1.5 h-4 w-4" /> {copied ? "Copied" : "Copy Markdown"}
           </Button>
+        </div>
+      </section>
+
+      <section className="panel export-designer" aria-labelledby="export-designer-title">
+        <div className="export-designer-heading">
+          <div>
+            <p className="prod-kicker">PDF Designer</p>
+            <h2 id="export-designer-title">Customize the handoff</h2>
+            <p>Choose the audience, visual system, page format, and document metadata before printing.</p>
+          </div>
+          <div className="theme-swatches" aria-label="Selected print palette">
+            <span style={{ backgroundColor: printOptions.accentColor }} />
+            <span />
+            <span />
+          </div>
+        </div>
+
+        <div className="export-control-grid">
+          <SelectField label="Document profile" value={printOptions.profile} onChange={(value) => updatePrintOption("profile", value as PrintOptions["profile"])}>
+            <option value="volunteer">Volunteer Guide</option>
+            <option value="technical">Technical Report</option>
+          </SelectField>
+          <SelectField label="Design theme" value={printOptions.theme} onChange={(value) => updatePrintOption("theme", value as PrintOptions["theme"])}>
+            {Object.entries(printThemeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </SelectField>
+          <SelectField label="Text density" value={printOptions.density} onChange={(value) => updatePrintOption("density", value as PrintOptions["density"])}>
+            <option value="compact">Compact</option>
+            <option value="standard">Standard</option>
+            <option value="large">Large text</option>
+          </SelectField>
+          <SelectField label="Paper size" value={printOptions.paper} onChange={(value) => updatePrintOption("paper", value as PrintOptions["paper"])}>
+            <option value="a4">A4</option>
+            <option value="letter">US Letter</option>
+          </SelectField>
+          <TextField label="Document title" value={printOptions.documentTitle} onChange={(value) => updatePrintOption("documentTitle", value)} />
+          <TextField label="Venue / church" value={printOptions.venueName} placeholder="Optional" onChange={(value) => updatePrintOption("venueName", value)} />
+          <TextField label="Prepared by" value={printOptions.preparedBy} placeholder="Optional" onChange={(value) => updatePrintOption("preparedBy", value)} />
+          <TextField label="Revision" value={printOptions.revision} onChange={(value) => updatePrintOption("revision", value)} />
+          <label className="export-field">
+            <span>Accent color</span>
+            <div className="color-field">
+              <input type="color" value={printOptions.accentColor} onChange={(event) => updatePrintOption("accentColor", event.target.value)} />
+              <code>{printOptions.accentColor.toUpperCase()}</code>
+            </div>
+          </label>
+        </div>
+
+        <div className="export-check-grid">
+          <CheckRow label="Include cover page" checked={printOptions.includeCover} onChange={(checked) => updatePrintOption("includeCover", checked)} />
+          <CheckRow label="Include troubleshooting" checked={printOptions.includeTroubleshooting} onChange={(checked) => updatePrintOption("includeTroubleshooting", checked)} />
+          <CheckRow label="Include advanced details" checked={printOptions.includeAdvanced} onChange={(checked) => updatePrintOption("includeAdvanced", checked)} />
+          <CheckRow label="Show unassigned controls" checked={printOptions.showUnassigned} onChange={(checked) => updatePrintOption("showUnassigned", checked)} />
+          <CheckRow label="Mark internal / confidential" checked={printOptions.confidential} onChange={(checked) => updatePrintOption("confidential", checked)} />
         </div>
       </section>
 
@@ -152,6 +217,24 @@ export function ExportTab({ scene }: { scene: MixerScene }) {
         </div>
       </div>
     </div>
+  );
+}
+
+function SelectField({ label, value, onChange, children }: { label: string; value: string; onChange: (value: string) => void; children: ReactNode }) {
+  return (
+    <label className="export-field">
+      <span>{label}</span>
+      <select value={value} onChange={(event) => onChange(event.target.value)}>{children}</select>
+    </label>
+  );
+}
+
+function TextField({ label, value, placeholder, onChange }: { label: string; value: string; placeholder?: string; onChange: (value: string) => void }) {
+  return (
+    <label className="export-field">
+      <span>{label}</span>
+      <input type="text" value={value} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} />
+    </label>
   );
 }
 
