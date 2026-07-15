@@ -1,0 +1,48 @@
+name: Bug report
+description: Report incorrect behavior in RouteView without publishing sensitive scene data.
+title: "Bug: "
+labels: [bug, needs-triage]
+body:
+  - type: markdown
+    attributes:
+      value: Remove church names, personal information, credentials, IP addresses, and livestream keys before sharing scene content.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Explain the observed behavior and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      placeholder: "1. Open RouteView\n2. Import...\n3. Select..."
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Browser and RouteView version
+      placeholder: "Chrome 126, RouteView 1.0.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: console
+    attributes:
+      label: Console family
+      options: [X32, M32, Unsupported console, Not applicable]
+    validations:
+      required: true
+  - type: textarea
+    id: safe-sample
+    attributes:
+      label: Sanitized sample or screenshots
+      description: Include only the minimum safe content needed to reproduce the issue.
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: I removed sensitive and identifying information.
+          required: true

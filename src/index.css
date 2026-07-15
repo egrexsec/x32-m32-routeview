@@ -947,6 +947,14 @@
 }
 
 @media (max-width: 720px) {
+  .prod-header {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .prod-meta {
+    text-align: left;
+  }
+
   .workflow-steps,
   .quick-ref-grid,
   .guide-metric-grid,

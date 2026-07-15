@@ -19,7 +19,11 @@ Instead, report with:
 - impact assessment
 - suggested remediation if known
 
-If no dedicated security contact exists yet, open a GitHub issue with minimal detail and clearly label it `security` without publishing exploit instructions.
+Use GitHub's private vulnerability reporting for this repository:
+`https://github.com/egrexsec/x32-m32-routeview/security/advisories/new`.
+
+Do not open a public issue for a vulnerability. If private reporting is unavailable,
+contact the maintainer without including exploit details and ask for a private channel.
 
 ## Current expectations
 Before public release hardening, maintainers should treat these as required:
@@ -29,7 +33,7 @@ Before public release hardening, maintainers should treat these as required:
 - prefer typed parsing over dynamic execution patterns
 
 ## Out of scope
-The following are not currently part of RouteView’s runtime surface:
+The following are not currently part of RouteViewâ€™s runtime surface:
 - hosted account systems
 - remote control of consoles
 - multi-tenant cloud infrastructure
