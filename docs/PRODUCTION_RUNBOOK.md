@@ -7,7 +7,7 @@
 - [ ] Confirm the dependency audit and GitHub security alerts have no unresolved critical/high findings.
 - [ ] Test demo, valid scene, invalid extension, empty scene, malformed scene, replacement upload, search, every advanced tab, every export, and print/PDF.
 - [ ] Check keyboard-only operation, visible focus, 200% zoom, narrow mobile viewport, and light/dark OS preference.
-- [ ] Verify `routeview.mell0wx.tech`, HTTPS, redirects, SPA fallback, favicon, canonical URL, Open Graph image, robots file, and 404 behavior.
+- [ ] Verify `x32-m32-routeview.vercel.app`, HTTPS, redirects, SPA fallback, favicon, canonical URL, Open Graph image, robots file, and 404 behavior.
 - [ ] Confirm browser console/network panels contain no errors and no scene payload leaves the browser.
 - [ ] Tag `v1.0.0`, publish the GitHub release notes, and record the deployed commit SHA.
 
