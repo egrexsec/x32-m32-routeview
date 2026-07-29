@@ -33,7 +33,7 @@ Before public release hardening, maintainers should treat these as required:
 - prefer typed parsing over dynamic execution patterns
 
 ## Out of scope
-The following are not currently part of RouteViewâ€™s runtime surface:
+The following are not currently part of RouteView’s runtime surface:
 - hosted account systems
 - remote control of consoles
 - multi-tenant cloud infrastructure
