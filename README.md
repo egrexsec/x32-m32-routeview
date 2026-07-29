@@ -166,7 +166,7 @@ npm run preview
 
 The repo also includes `vercel.json` for static deployment-oriented hosting workflows.
 
-Production target: <https://routeview.mell0wx.tech>
+Production target: <https://x32-m32-routeview.vercel.app>
 
 Before a release, follow the [production runbook](docs/PRODUCTION_RUNBOOK.md), review
 the [launch-readiness report](docs/LAUNCH_READINESS.md), and publish the matching

@@ -2,7 +2,7 @@
 
 Audit date: 2026-07-15  
 Release candidate: 1.0.0  
-Target: <https://routeview.mell0wx.tech>
+Target: <https://x32-m32-routeview.vercel.app>
 
 ## Decision
 
@@ -96,7 +96,7 @@ normalized; that limitation is explicit and is appropriate for 1.0.0.
 ## GitHub owner actions
 
 - Set description: `Volunteer-friendly routing documentation for Behringer X32 and Midas M32 scene files.`
-- Set homepage to `https://routeview.mell0wx.tech`.
+- Set homepage to `https://x32-m32-routeview.vercel.app`.
 - Add topics: `x32`, `m32`, `live-audio`, `church-tech`, `routing`, `react`, `typescript`.
 - Upload a 1280x640 social preview and enable Discussions only if there is capacity to moderate it.
 - Protect `main`: require pull requests, CI, CodeQL, conversation resolution, and no force pushes.
