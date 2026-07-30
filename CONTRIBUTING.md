@@ -1,4 +1,4 @@
-# Contributing to X32/M32 RouteView
+# Contributing to RouteView
 
 Thanks for helping improve RouteView.
 

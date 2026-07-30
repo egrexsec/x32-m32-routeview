@@ -1,199 +1,135 @@
-# X32/M32 RouteView
+# RouteView
 
-Topology-aware documentation and visualization tool for **Behringer X32** and **Midas M32** scene (`.scn`) files.
+RouteView turns **Behringer X32** and **Midas M32** scene (`.scn`) files into readable routing documentation and production handoff guides.
 
-![RouteView home](docs/assets/screenshots/home.png)
+**Production URL:** <https://routeview.mell0wx.tech>
 
-## Project summary
+**Source:** <https://github.com/egrexsec/x32-m32-routeview>
 
-RouteView turns mixer scene files into human-readable routing documentation. Instead of handing a volunteer, engineer, or replacement operator a raw `.scn` file and hoping they can decode it, the app parses the scene, normalizes the routing model, and presents it in a structured workspace.
+**Status:** v1.0.0 is released; the branded Vercel custom-domain cutover requires the owner steps in [docs/deployment.md](docs/deployment.md).
 
-## Who it is for
+![RouteView production sheet](docs/assets/screenshots/routeview-production-sheet.png)
 
-- church AV teams
-- venue and club engineers
-- broadcast teams
-- theater and education environments
-- rental providers and freelancers doing engineer handoff
-- volunteers onboarding into an existing console showfile
+## Why RouteView exists
 
-## Problem it solves
+An X32/M32 scene file is useful to the console but difficult to use as an operating document. Routing decisions, monitor mixes, outputs, DCAs, and unsupported commands are buried in a text export. RouteView gives volunteers, engineers, and replacement operators a faster way to inspect that information without loading the scene on a console.
 
-X32/M32 scene files are powerful, but they are not a friendly operating document. RouteView helps teams:
-- understand channel layout and routing faster
-- trace signal flow during troubleshooting
-- produce production sheets for handoff
-- review console setup without loading the showfile on the console first
-- keep documentation closer to the actual scene file
+Scene content stays in the browser. RouteView does not connect to a console, upload scene data, or modify the source file.
 
-## Current status
+## Implemented features
 
-**Production-focused local documentation tool.**
+- drag-and-drop, file-picker, replacement, cancellation, and demo-data workflows
+- local X32/M32 `.scn` parsing with file type, empty-file, and size validation
+- normalized channels, buses, DCAs, outputs, routing blocks, and topology helpers
+- volunteer-facing production sheet with search, jump links, collapsible sections, highlights, reset, and no-results feedback
+- routing summaries, signal-flow views, graph views, warnings, and parser bucket summaries
+- conservative handling that surfaces unsupported or partially parsed commands instead of guessing
+- Markdown, HTML, JSON, plain-text, CSV, and browser print/PDF exports
+- clean scene/date-based export filenames
+- responsive upload and documentation workflow with visible processing and error states
 
-Confirmed in the repository today:
-- validated drag-and-drop, browse, paste, replace, and cancel upload paths
-- local `.scn` parsing for X32/M32 scene files; scene data is not uploaded
-- normalized scene model for channels, buses, DCAs, outputs, and routing blocks
-- conservative parser behavior that keeps unknown/unhandled lines visible
-- instant client-side search, jump links, collapsible sections, highlights, reset, and no-results states inside the generated production sheet
-- exports for Markdown, HTML, JSON, plain text, CSV, and browser print/PDF with clean scene/date filenames
-- tests around parser, scene model, and topology graph behavior
-- browser UI for upload, demo data, documentation review, and professional handoff
+## Screenshots
 
-## Features
+| Upload workflow | Generated documentation |
+| --- | --- |
+| ![RouteView upload](docs/assets/screenshots/home.png) | ![RouteView generated documentation](docs/assets/screenshots/generated-docs.png) |
 
-- `.scn` upload/parsing for X32 / M32 scene files
-- drag-and-drop upload with file type and size validation
-- clear processing status for file reading, parsing, routing analysis, documentation generation, and finalization
-- scene overview for channels, buses, DCAs, and output patches
-- searchable production sheet with jump links, collapsible sections, match highlighting, reset search, and helpful empty states
-- signal-tracing and topology-oriented modeling through the scene graph/domain model
-- professional exports to Markdown, HTML, JSON, plain text, CSV, and browser print/PDF
-- clean export filenames based on the scene name and export date
-- routing maps and readable summaries for handoff
-- conservative parser bucket summaries for unsupported or partially parsed constructs
-- volunteer onboarding and engineer handoff friendly presentation
-- browser-based review flow with demo data
+Additional screenshots:
 
-## Supported mixer files
+- [upload success](docs/assets/screenshots/upload-success.png)
+- [export menu](docs/assets/screenshots/export-menu.png)
+- [production sheet](docs/assets/screenshots/routeview-production-sheet.png)
 
-Currently confirmed:
-- Behringer X32 scene files (`.scn`)
-- Midas M32 scene files (`.scn`)
+## Technology
 
-The parser is intentionally conservative. Unsupported commands are summarized instead of silently discarded.
-
-## Screenshots / demo
-
-### Home / upload workflow
-
-![RouteView home](docs/assets/screenshots/home.png)
-
-### Upload success state
-
-![RouteView upload success](docs/assets/screenshots/upload-success.png)
-
-### Generated documentation workspace
-
-![RouteView generated docs](docs/assets/screenshots/generated-docs.png)
-
-### Export menu
-
-![RouteView export menu](docs/assets/screenshots/export-menu.png)
-
-## Architecture
-
-```text
-src/pages/              Top-level UI routes
-src/components/         View and workspace components
-src/parsers/            Scene parser implementations
-src/lib/                Exporters, scene logic, graph/topology helpers
-src/types/              Typed routing/domain models
-src/test/               Parser and model tests
-public/                 Static assets
-```
-
-## Tech stack
-
-- React 18
+- React 19
 - TypeScript
-- Vite
-- Tailwind CSS
+- Vite 8
+- Tailwind CSS 3
 - Radix UI primitives
 - Vitest
 - ESLint
+- Vercel static deployment
 
-## Quick start
+See [docs/architecture.md](docs/architecture.md) for runtime boundaries and source layout.
 
-```bash
-npm install
-npm run dev -- --host 0.0.0.0
-```
+## Local development
 
-Open `http://localhost:8080`.
-
-## Usage
-
-See [docs/demo-workflow.md](docs/demo-workflow.md) for a step-by-step local demo and operator handoff walkthrough.
-
-### Sample workflow
-
-1. open RouteView in the browser
-2. drag in an X32 or M32 `.scn` file, browse for one, paste scene text, or use demo data
-3. watch the upload and parsing status until the documentation is generated
-4. use jump links, collapsible sections, and Quick find to search channel, bus, output, route, DCA, and signal-trace content
-5. inspect channel, bus, DCA, output, routing, warnings, handoff notes, and parser bucket summaries
-6. export Markdown, HTML, JSON, plain text, CSV, or print/save as PDF; downloaded files use the scene name plus the export date
-
-## Project structure
-
-```text
-src/
-  components/
-  lib/
-  pages/
-  parsers/
-  test/
-  types/
-docs/
-public/
-```
-
-## Testing
+Use the package manager indicated by `package-lock.json`:
 
 ```bash
-npm install
+npm ci
+npm run dev
+```
+
+Open <http://localhost:8080>.
+
+### Environment variables
+
+Copy `.env.example` only when you need to override public-origin behavior:
+
+```bash
+cp .env.example .env.local
+```
+
+| Variable | Purpose | Local default | Production value |
+| --- | --- | --- | --- |
+| `VITE_SITE_URL` | Canonical metadata, sitemap, and robots origin | `http://localhost:8080` | `https://routeview.mell0wx.tech` |
+
+`VITE_` values are browser-visible public configuration. Never place secrets or credentials in them.
+
+## Validation
+
+```bash
+npm ci
 npm run lint
 npm run test
 npm run build
 ```
 
-Confirmed tests include:
-- `src/test/x32-parser.test.ts`
-- `src/test/scene-model.test.ts`
-- `src/test/topology-graph.test.ts`
-- `src/test/upload-validation.test.ts`
-- `src/test/exporters.test.ts`
+There is no separate `typecheck` script; `npm run build` runs TypeScript project compilation before Vite emits the production bundle.
+
+Automated coverage includes parser, scene model, topology graph, upload validation, exporters, route handling, and public metadata configuration.
 
 ## Deployment
 
-Local preview:
+RouteView remains an independent Vercel project. It is not deployed through, proxied by, embedded in, or merged into the `mell0wx.tech` portfolio runtime.
 
-```bash
-npm run build
-npm run preview
+The production Vercel project should set:
+
+```text
+VITE_SITE_URL=https://routeview.mell0wx.tech
 ```
 
-The repo also includes `vercel.json` for static deployment-oriented hosting workflows.
+Follow [docs/deployment.md](docs/deployment.md) for the exact Vercel domain, DNS, SSL, verification, and rollback steps. Keep the generated `*.vercel.app` URL for previews and troubleshooting rather than redirecting it in application code.
 
-Production target: <https://x32-m32-routeview.vercel.app>
+## Project structure
 
-Before a release, follow the [production runbook](docs/PRODUCTION_RUNBOOK.md), review
-the [launch-readiness report](docs/LAUNCH_READINESS.md), and publish the matching
-[release notes](docs/RELEASE_NOTES_1.0.0.md).
+```text
+src/
+  components/   upload, documentation, routing, and export UI
+  lib/          validation, modeling, topology, exporters, and site config
+  pages/        top-level application views
+  parsers/      X32/M32 scene parsing
+  test/         Vitest suites
+  types/        routing domain types
+docs/           architecture, deployment, roadmap, release, and screenshots
+public/         static assets
+```
 
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md).
+[docs/roadmap.md](docs/roadmap.md) distinguishes shipped v1.0.0 behavior from near-term candidates and future ideas. Major unreleased ideas include scene comparison, richer routing-map layers, and additional console adapters.
 
-Near-term priorities:
-- expand parser coverage for more console detail categories
-- improve route graph readability and export reliability
-- deepen production-sheet workflows
-- improve print/PDF handoff presentation
+## Contributing and security
 
-## Open-source positioning
+- [Contributing guide](CONTRIBUTING.md)
+- [Security policy](SECURITY.md)
+- [Issue tracker](https://github.com/egrexsec/x32-m32-routeview/issues)
+- [v1.0.0 release](https://github.com/egrexsec/x32-m32-routeview/releases/tag/v1.0.0)
 
-RouteView is written as a practical operator tool, not as a vague SaaS concept. Future commercial work, such as optional premium templates or consulting around AV documentation workflows, should only sit on top of a strong open-source core.
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## Security
-
-See [SECURITY.md](SECURITY.md).
+Do not attach private production scene files to public issues. Reduce parser reports to sanitized minimum fixtures.
 
 ## License
 
-This repository includes a [LICENSE](LICENSE) file.
+RouteView is available under the [MIT License](LICENSE).
