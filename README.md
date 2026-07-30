@@ -83,11 +83,12 @@ cp .env.example .env.local
 ```bash
 npm ci
 npm run lint
+npx tsc -b
 npm run test
 npm run build
 ```
 
-There is no separate `typecheck` script; `npm run build` runs TypeScript project compilation before Vite emits the production bundle.
+`npx tsc -b` performs TypeScript project compilation. `npm run build` then emits the production Vite bundle.
 
 Automated coverage includes parser, scene model, topology graph, upload validation, exporters, route handling, and public metadata configuration.
 
