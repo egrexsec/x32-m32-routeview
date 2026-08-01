@@ -1,7 +1,7 @@
 # Security Policy
 
 ## Supported scope
-X32/M32 RouteView is currently a client-side scene parsing and visualization tool.
+RouteView is currently a client-side scene parsing and visualization tool.
 
 Security-sensitive areas include:
 - file parsing behavior

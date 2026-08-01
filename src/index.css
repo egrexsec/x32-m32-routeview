@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* X32/M32 RouteView - professional documentation palette
+/* RouteView - professional documentation palette
    All semantic tokens defined in HSL.
 */
 
@@ -476,7 +476,8 @@
 
   .workflow-map-dark li {
     border-color: rgb(255 255 255 / 0.16);
-    background: rgb(255 255 255 / 0.08);
+    background: rgb(15 23 42 / 0.78);
+    color: #fff;
   }
 
   .workflow-map li > span {

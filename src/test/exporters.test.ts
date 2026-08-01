@@ -30,7 +30,7 @@ describe("scene exporters", () => {
     const html = sceneToHtml(scene);
 
     expect(html).toContain("<!doctype html>");
-    expect(html).toContain("X32 / M32 RouteView Documentation");
+    expect(html).toContain("RouteView Documentation");
     expect(html).toContain("Professional Condensed Routing Chart");
     expect(html).toContain("Sunday Service.scn");
   });
@@ -38,7 +38,7 @@ describe("scene exporters", () => {
   it("exports structured json documentation", () => {
     const json = JSON.parse(sceneToJson(scene));
 
-    expect(json.generatedBy).toBe("X32/M32 RouteView");
+    expect(json.generatedBy).toBe("RouteView");
     expect(json.scene.fileName).toBe("Sunday Service.scn");
     expect(json.scene.inputs.length).toBeGreaterThan(0);
   });

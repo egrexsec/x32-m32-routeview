@@ -49,7 +49,7 @@ export function ProductionSheet({ scene, printMode = false, printOptions = defau
     <article className={printMode ? "production-sheet volunteer-guide production-sheet-print" : "production-sheet volunteer-guide space-y-8"}>
       {printMode && printOptions.includeCover ? (
         <section className="print-cover">
-          <div className="print-cover-brand">X32 / M32 RouteView</div>
+          <div className="print-cover-brand">RouteView</div>
           <div className="print-cover-rule" />
           <p className="print-cover-type">{printOptions.profile === "technical" ? "Technical Routing Report" : "Volunteer Console Guide"}</p>
           <h1>{printOptions.documentTitle || guide.sceneName}</h1>

@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowDown, ArrowUp, CheckCircle2, FileDown, FileText, FileUp, Share2, Sparkles } from "lucide-react";
 import { buildVolunteerGuide } from "@/lib/volunteerGuide";
 import { defaultPrintOptions, type PrintOptions } from "@/lib/printOptions";
+import { ROUTEVIEW } from "@/lib/siteConfig";
 
 const Index = () => {
   const [scene, setScene] = useState<MixerScene | null>(null);
@@ -47,7 +48,7 @@ const Index = () => {
       <header className="hero-bg relative overflow-hidden text-white no-print">
         <div className="console-grid absolute inset-0 opacity-[0.08]" aria-hidden />
         <div className="container relative py-10 md:py-14">
-          <p className="prod-kicker text-primary/90">X32 / M32 RouteView</p>
+          <p className="prod-kicker text-primary/90">RouteView · X32 / M32 scene documentation</p>
           <h1 className="mt-3 max-w-4xl text-3xl font-bold tracking-tight md:text-5xl">
             Turn an X32/M32 scene file into a volunteer-friendly sound board guide.
           </h1>
@@ -62,6 +63,19 @@ const Index = () => {
             <Button size="lg" variant="secondary" onClick={loadDemo}>
               <Sparkles className="mr-1.5 h-4 w-4" /> Preview With Demo
             </Button>
+          </div>
+          <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm text-white/70">
+            <a className="underline-offset-4 hover:text-white hover:underline" href={ROUTEVIEW.portfolioUrl}>
+              Built by Mell0wx
+            </a>
+            <a
+              className="underline-offset-4 hover:text-white hover:underline"
+              href={ROUTEVIEW.repositoryUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              View source on GitHub
+            </a>
           </div>
         </div>
       </header>
@@ -108,8 +122,13 @@ const Index = () => {
         )}
       </div>
 
-      <footer className="border-t py-6 text-center text-xs text-muted-foreground no-print">
-        RouteView is a documentation tool. It does not connect to a console or modify scene data.
+      <footer className="border-t px-4 py-6 text-center text-xs text-muted-foreground no-print">
+        <p>RouteView is a documentation tool. It does not connect to a console or modify scene data.</p>
+        <p className="mt-2">
+          Built by <a className="underline underline-offset-4 hover:text-foreground" href={ROUTEVIEW.portfolioUrl}>Mell0wx</a>
+          {" · "}
+          <a className="underline underline-offset-4 hover:text-foreground" href={ROUTEVIEW.repositoryUrl} target="_blank" rel="noreferrer">GitHub</a>
+        </p>
       </footer>
 
       {scene ? <PrintView scene={scene} options={printOptions} /> : null}
@@ -219,7 +238,7 @@ function EmptyHint() {
 function WorkflowMap({ activeStep, tone = "light" }: { activeStep: number; tone?: "light" | "dark" }) {
   const steps = ["Upload Scene File", "RouteView Analyzes It", "Review Volunteer Guide", "Export and Share"];
   return (
-    <ol className={`workflow-map workflow-map-${tone}`} aria-label="RouteView workflow">
+    <ol className={tone === "dark" ? "workflow-map workflow-map-dark" : "workflow-map workflow-map-light"} aria-label="RouteView workflow">
       {steps.map((step, index) => (
         <li key={step} className={index + 1 === activeStep ? "is-active" : index + 1 < activeStep ? "is-done" : ""}>
           <span>{index + 1}</span>
