@@ -10,6 +10,13 @@ updates:
         dependency-type: production
       development-dependencies:
         dependency-type: development
+    ignore:
+      # Current ESLint integration supports TypeScript <6.1 only.
+      - dependency-name: typescript
+        versions: [">=6.1.0"]
+      # The project still uses Tailwind 3's PostCSS plugin/configuration.
+      - dependency-name: tailwindcss
+        versions: [">=4.0.0"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
